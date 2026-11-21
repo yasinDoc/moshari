@@ -1,6 +1,6 @@
 # Moshari architecture
 
-Moshari forecasts dengue cases for each of 60 city wards 2, 3 and 4 weeks ahead. It turns those forecasts into Low, Medium, High or Critical risk with a response for each tier. Forecasting runs locally from a saved model. The only runtime API call is one cached Open-Meteo request for the Live outlook page.
+Moshari forecasts dengue cases for each of 60 city wards 2, 3 and 4 weeks ahead and turns them into Low, Medium, High or Critical risk, each with a response. Forecasting runs locally from a saved model; the only runtime API call is one cached Open-Meteo request for the Live outlook.
 
 ## Data flow
 
@@ -9,124 +9,88 @@ flowchart LR
     A["Weekly ward CSV<br/>weather + ward profile + cases"] --> B["Validate<br/>schema, ranges,<br/>duplicates, weekly gaps"]
     B --> C["Feature builder<br/>groupby(ward_id)<br/>rain lags 0–8 wk, breeding window,<br/>temp/humidity rolls, case history"]
     C --> D["Chronological split<br/>by target week"]
-    D -->|"2016–2022"| E["Train<br/>LightGBM Poisson + q10/q90<br/>per horizon (2, 3, 4 wk)"]
-    D -->|"2023"| F["Validate<br/>early stopping +<br/>conformal calibration"]
+    D -->|"2016–2022"| E["Train<br/>LightGBM per horizon (2, 3, 4 wk)"]
+    D -->|"2023"| F["Validate<br/>early stopping, conformal range,<br/>probability cut-offs"]
     E --> G[("models/moshari_lgbm.joblib<br/>18 boosters: mean, quantiles,<br/>P(High), P(Critical), rain-forecast")]
     F --> G
     D -->|"2024–2025"| H["Hold-out test<br/>vs 3 baselines"]
     G --> H --> I[("artifacts/<br/>metrics.json, backtest.parquet")]
-    G --> J["ForecastService<br/>(src/moshari/service.py)"]
+    G --> J["ForecastService<br/>(service.py)"]
     C --> J
-    J --> K["Streamlit dashboard<br/>ward net, ward forecast,<br/>what-if, accuracy, upload"]
-    J --> L["FastAPI REST<br/>/forecast, /outlook,<br/>/explain, /scenario"]
-    M["Open-Meteo<br/>1 batched request,<br/>6 h disk cache"] -->|"live weather"| J
+    M["Open-Meteo<br/>1 batched request, 6 h cache"] -->|"weather, ward-adjusted,<br/>case nowcast (live.py)"| J
+    J --> K["Streamlit dashboard"]
+    J --> L["FastAPI REST"]
     I --> K
 ```
 
-Code layout: `src/moshari/` holds the engine (`data`, `features`, `model`, `risk`, `evaluation`, `training`, `service`). `ui/` holds the dashboard only. Neither the dashboard nor the REST API (`api.py`) touches LightGBM directly; both call `ForecastService`, so a fix or a new model reaches both at once.
+`src/moshari/` holds the engine (`data`, `features`, `model`, `risk`, `evaluation`, `training`, `service`, `live`); `ui/` holds the dashboard only. Neither the dashboard nor the API touches LightGBM directly. Both call `ForecastService`, so a fix reaches both at once.
 
 ## The breeding clock, as features
 
-Rain does not cause cases the next day. Water pools, Aedes larvae take 7 to 14 days to mature, and symptoms follow incubation. Measured inside each ward, rainfall correlates with cases most strongly **3 weeks later (r = 0.75)**, compared with 0.53 for same-week rain. All features are computed within `groupby(ward_id)` and look only backwards from the issue week *t*:
+Larvae take 7 to 14 days to mature and symptoms follow incubation, so within each ward rainfall correlates with cases most strongly **3 weeks later (r = 0.75)**, against 0.53 for same-week rain. All features are computed within `groupby(ward_id)` and look only backwards from the issue week *t*; the target for horizon *h* is cases at *t + h*. Tests check that lags never cross wards and that changing a future week leaves earlier features unchanged.
 
 | Group | Features |
 |---|---|
-| Rainfall | weekly lags 0–8, rolling sums over 2/4/8 weeks, `rain_breeding_window` (lags 2–4), count of heavy-rain weeks |
+| Rainfall | lags 0–8 weeks, 2/4/8-week sums, `rain_breeding_window` (lags 2–4), heavy-rain weeks |
 | Temperature, humidity | 2- and 4-week means, value 3 weeks ago, day–night range |
 | Ward vulnerability | density, water-logging, sanitation, composite index, city corporation |
 | Recent transmission | cases this week, 1 and 2 weeks ago, 4-week mean, 2-week trend |
 | Seasonality | week of year as sine and cosine |
 
-The target for horizon *h* is cases at *t + h*. Unit tests check that lags never cross ward boundaries and that changing a future week leaves every earlier feature unchanged.
-
 ## Chronological validation
 
-The split is by the **week being forecast**, never random: train on 2016–2022, validate on 2023, test on 2024–2025.
+Split by the **week being forecast**, never at random: train 2016–2022, validate 2023, test 2024–2025. 2023 chooses boosting rounds, calibrates the 80% range (conformalized quantile regression) and tunes probability cut-offs; the shipped model is then refit on 2016–2023 and scored once on 2024–25. Dashboard replays of 2024–25 are therefore out-of-sample. `scripts/train.py --production` refits on all years for deployment.
 
-1. Fit on train and early-stop on 2023 to choose boosting rounds.
-2. Calibrate the 80% range on 2023 with conformalized quantile regression, which widens or narrows the q10–q90 band until it covers 80% of that year.
-3. Refit on 2016–2023 with those rounds. This is the shipped model.
-4. Score once on 2024–2025, which the model never saw.
+| Horizon | MAE | RMSE | This week | Last year | Seasonal avg | Tier accuracy | 80% coverage |
+|---|---|---|---|---|---|---|---|
+| 2 weeks | **1.01** | 2.05 | 1.66 | 1.69 | 1.24 | 83% | 82% |
+| 3 weeks | **1.03** | 2.03 | 1.87 | 1.69 | 1.24 | 83% | 80% |
+| 4 weeks | **1.19** | 2.33 | 2.06 | 1.69 | 1.24 | 81% | 85% |
 
-Results on the hold-out (6,300 ward-weeks per horizon; MAE and RMSE in cases per ward per week):
-
-| Horizon | MAE | RMSE | Baseline: this week | Baseline: last year | Baseline: seasonal avg | Tier accuracy | High-risk recall | 80% range coverage |
-|---|---|---|---|---|---|---|---|---|
-| 2 weeks | **1.01** | 2.05 | 1.66 | 1.69 | 1.24 | 83% | 69% | 82% |
-| 3 weeks | **1.03** | 2.03 | 1.87 | 1.69 | 1.24 | 83% | 71% | 80% |
-| 4 weeks | **1.19** | 2.33 | 2.06 | 1.69 | 1.24 | 81% | 70% | 85% |
-
-The dashboard runs replays inside 2024–25 using this same model, so every forecast shown there is out-of-sample. `python scripts/train.py --production` refits on all years for a live deployment.
+MAE and RMSE are in cases per ward per week over 6,300 hold-out ward-weeks per horizon; the three middle columns are baseline MAEs.
 
 ## Model choice
 
-**LightGBM gradient-boosted trees, one model per horizon, with a Poisson objective**, plus two quantile models per horizon for the 80% range.
+**LightGBM, one set of models per horizon.** A Poisson model gives expected cases, two quantile models the 80% range, and two binary models the chance of reaching High and Critical.
 
-- The data is small and tabular (31k rows, 33 features). Boosted trees beat neural nets in this setting and need little tuning.
-- Cases are non-negative counts with many zeros, so a Poisson objective fits better than squared error.
-- Separate models per horizon (direct forecasting) avoid the error compounding of feeding forecasts back in as inputs.
-- Explanations are exact and free: LightGBM computes TreeSHAP natively (`pred_contrib=True`), so no extra library is needed. In log space the contributions add up exactly to the prediction, which a test verifies. The UI shows them as multipliers ("rainfall ×4.5").
-- Tiers use fixed thresholds from training-year case quantiles (P70, P85, P95, which are 2, 7 and 13 cases a week). They are stored in the bundle, so tiers mean the same thing everywhere.
+- Small tabular data (31k rows, 33 features): boosted trees beat neural nets here with little tuning.
+- Counts with many zeros suit a Poisson objective better than squared error.
+- Direct per-horizon models avoid compounding errors from feeding forecasts back in.
+- Explanations are exact and free: LightGBM's native TreeSHAP (`pred_contrib=True`) adds up to the prediction in log space (tested), shown as multipliers such as "rainfall ×4.5".
+- Tier thresholds come from training-year quantiles (2, 7 and 13 cases a week) and are stored in the bundle.
 
-## Peaks, outbreak probability and the rain forecast
+## Peaks, alerts and the rain forecast
 
-Three measured fixes for the weaknesses of an expected-cases model (all on the 2024–25 hold-out):
+**Outbreak probability.** Expected cases smooth over peaks (about 4 cases low on actual Critical weeks). Peak-weighting, isotonic or power calibration and Tweedie all raised average error by 10–20%, so instead the binary models estimate P(Critical); a ward goes on **Critical watch** past a cut-off tuned on 2023. Critical weeks caught rise from **24/28/20% to 63/70/73%** at 2/3/4 weeks (AUC 0.96/0.95/0.92), at the cost of more false alarms (about two in three flags at 3 weeks stay below Critical).
 
-**Outbreak probability.** Expected cases smooth over peaks, so judging tiers by them catches few Critical weeks. Per horizon, two binary LightGBM models estimate P(reaching High) and P(reaching Critical). Their cut-offs are tuned on 2023 only. A ward goes on **Critical watch** when P(Critical) passes its cut-off.
+**Alert sensitivity.** Who goes on the watch list is a separate, switchable rule (3-week horizon):
 
-| Horizon | Critical weeks caught, by expected cases | by probability | AUC |
-|---|---|---|---|
-| 2 weeks | 24% | **63%** | 0.96 |
-| 3 weeks | 28% | **70%** | 0.95 |
-| 4 weeks | 20% | **73%** | 0.92 |
-
-The cost is false alarms: at 3 weeks about two in three Critical-watch flags stay below Critical, which is acceptable for a "prepare" signal. Other ways of lifting peaks (peak-weighted training, isotonic or power calibration, Tweedie) all raised the average error by 10–20%, so the expected-cases model is unchanged.
-
-**Rain forecast for 3–4 weeks.** Cases 4 weeks out depend mostly on rain in the coming week, which hasn't fallen at issue time. That's why the 4-week model was only 5% better than the seasonal average, and why stacking, seasonal priors and bigger models didn't help. A forecast-assisted model also sees the next two weeks of weather. It is trained with noise (rain ±65%, temperature ±1 °C) so it doesn't over-trust the forecast. Live mode feeds it Open-Meteo's forecast.
-
-| 4 weeks ahead | Average miss |
-|---|---|
-| Seasonal average | 1.26 |
-| Moshari, no rain forecast | 1.19 |
-| **+ realistic rain forecast** | **1.08** (9% lower) |
-| + perfect rain forecast | 1.07 |
-
-Replay mode keeps the original model, because archived forecasts for past weeks aren't available.
-
-## Alert sensitivity
-
-The tier shows the best estimate. Whether a ward goes **on alert** is a separate choice with a trade-off, measured on the 2024–25 hold-out (3-week horizon):
-
-| Rule | Alerts when | High-risk weeks caught | Alerts that were real | Alerted in time for season onset |
+| Rule | Alerts when | High-risk weeks caught | Alerts that were real | Alerted by season onset |
 |---|---|---|---|---|
 | Standard | expected cases reach High | 71% | 67% | 35% |
-| Balanced | midpoint of expected and upper bound reaches High | 87% | 59% | 57% |
-| **Cautious (default)** | upper end of the 80% range reaches High | **98%** | 49% | **90%** |
+| Balanced | midpoint of expected and upper bound | 87% | 59% | 57% |
+| **Cautious (default)** | upper end of the 80% range | **98%** | 49% | **90%** |
 
-"Alerted in time" is the share of ward-seasons where an alert was already out by the first week cases actually reached High. In peak weeks most wards really are high-risk, so Cautious flags nearly all of them; its value is raising the alarm at season onset, when Standard is usually a week late.
+Missing an outbreak costs more than an extra larviciding visit, so Cautious is the default.
 
-Missing an outbreak costs far more than an extra larviciding visit, so Cautious is the default. Officers can switch rules in the sidebar.
+**Rain forecast.** Cases 4 weeks out depend on next week's rain, which hasn't fallen at issue time, so stacking, seasonal priors and bigger models barely helped. Forecast-assisted models also see the next two weeks of weather, trained with noise (rain ±65%, temperature ±1 °C) so they don't over-trust it. 4-week MAE drops from **1.19 to 1.08** with a realistic forecast (1.07 with a perfect one; seasonal average 1.26). Live mode feeds them Open-Meteo's forecast; replays keep the base model, as past forecasts aren't archived.
 
 ## Compute and API cost controls
 
-| Control | Where | Effect |
-|---|---|---|
-| Local inference, no LLM | whole app | Forecasts, explanations and what-ifs run on the local CPU. No LLM, so token cost is 0 by design. |
-| Batched, cached weather API | `live.py` | Live mode fetches all 5 cities in **one** Open-Meteo request, caches it on disk for 6 hours, rate-limits manual refresh to once per 10 minutes, and falls back to the last good response when offline. |
-| Serialized model | `models/moshari_lgbm.joblib` | Training (about 2 minutes on a laptop CPU) happens once. Startup only loads a 9.7 MB file. Boosters are stored in LightGBM's text format inside joblib, so they load across library versions. |
-| Process-wide model cache | `st.cache_resource` | The model and feature table load once per server, shared across users. |
-| Input-keyed result cache | `st.cache_data` on (data fingerprint, week, horizon, cities) | Repeated views are served from memory. A new upload changes the fingerprint and invalidates only its own entries. |
-| Vectorised inference | `ForecastService` | All 60 wards in about 0.1 s; a 30-week by 60-ward season heatmap in about 0.3 s. |
-| API response cache | `lru_cache` in `api.py` | A dashboard or SMS gateway polling `/forecast` repeatedly triggers one model call per distinct query. |
-| One-shot data fetch | `scripts/fetch_data.py` | The dataset is committed. Refreshing it is one validated HTTP GET with no key. |
-| Validation before compute | `data.validate` | Bad uploads are rejected before any feature or model work runs. |
+| Control | Effect |
+|---|---|
+| Local inference, no LLM | Forecasts, explanations and what-ifs run on the CPU; token cost is 0. |
+| One batched, cached weather call (`live.py`) | All 5 cities in **one** Open-Meteo request, cached on disk for 6 h, manual refresh limited to once per 10 min, last good response used offline. |
+| Serialized model | Training (about 2 min) happens once; startup loads a 9.7 MB joblib file with boosters in LightGBM's portable text format. |
+| Caching | Model and features load once per server (`st.cache_resource`); results are keyed by data fingerprint, week, horizon and cities (`st.cache_data`); the API has an `lru_cache`. |
+| Fast paths | All 60 wards in about 0.1 s; what-if sliders re-run only their card (`st.fragment`); the dashboard skips importing scikit-learn, cutting cold start from 12.4 s to 8.1 s. |
+| Validation first | Bad uploads are rejected before any feature or model work. |
 
-Live weather already follows this pattern (see `live.py`). If the final sprint adds an LLM summary, the same applies: fetch once per ward per day into a disk cache keyed by date, batch all wards into a single request, and cap LLM output tokens, with the cached template text as the fallback.
+An LLM summary in the final round would follow the same pattern: one batched request, a disk cache keyed by date, capped output tokens, and a cached template as fallback.
 
 ## Limitations
 
-- The source data is weekly, so forecasts and what-if results are updated at a weekly cadence rather than continuously.
-- The data has no ward coordinates or real geographic boundaries. The dashboard therefore uses a schematic ward-net view, not a real map.
-- Expected cases are an average, so they smooth over the biggest peaks: on actual Critical weeks the forecast is about 4 cases low. Moshari compensates with the separate outbreak-probability models below rather than inflating the average, which would make everyday forecasts worse.
-- Live mode has no live case reports yet. Recent case history is nowcast from the live weather with the model's own 2-week forecasts; connecting reported cases is the first roadmap item.
-- Live weather is one point per city corporation, adjusted to each ward with its historical ratio. In the training data a ward's weather differs from its city average by about 1% in rain and under 0.1 °C, so little is lost.
+- Weekly data, so forecasts update weekly; no ward coordinates, so the dashboard uses a schematic ward net, not a map.
+- Expected cases understate peaks; the outbreak-probability models above compensate.
+- Live mode has no reported cases yet: recent case history is a weather-driven nowcast from the model's own 2-week forecasts.
+- Live weather is one point per city corporation, adjusted per ward. In the training data wards differ from their city by about 1% in rain and under 0.1 °C, so little is lost.
