@@ -36,36 +36,42 @@ theme.stats([
     ("fact_check", "80% range hit rate", f"{hm['interval_coverage_80']:.0%}", "of actual counts inside the range"),
 ])
 
-with st.container(key="card-replay"):
-    b = bt[bt["horizon"] == horizon]
-    if cities:
-        b = b[b["city"].isin(cities)]
-    head, pick = st.columns([5, 2], vertical_alignment="bottom")
-    with head:
-        theme.card_title("Replay of 2024 and 2025",
-                         f"What Moshari forecast {horizon} weeks ahead, against what was actually reported.")
-    opts = ["All selected wards"] + sorted(b["ward_id"].unique())
-    who = pick.selectbox("Show", opts, format_func=lambda w: w if w == opts[0] else ward_label(w),
-                         key="mc_who", label_visibility="collapsed")
-    if who == opts[0]:
-        d = b.groupby("target_date")[["actual", "expected"]].sum().reset_index()
-        traces = []
-    else:
-        d = b[b["ward_id"] == who].sort_values("target_date")
-        traces = [
-            go.Scatter(x=d["target_date"], y=d["upper_80"], line=dict(width=0), showlegend=False, hoverinfo="skip"),
-            go.Scatter(x=d["target_date"], y=d["lower_80"], line=dict(width=0), fill="tonexty",
-                       fillcolor="rgba(14,115,105,0.14)", name="80% range", hoverinfo="skip"),
+@st.fragment
+def replay() -> None:
+    """Choosing a ward re-runs only this chart."""
+    with st.container(key="card-replay"):
+        b = bt[bt["horizon"] == horizon]
+        if cities:
+            b = b[b["city"].isin(cities)]
+        head, pick = st.columns([5, 2], vertical_alignment="bottom")
+        with head:
+            theme.card_title("Replay of 2024 and 2025",
+                             f"What Moshari forecast {horizon} weeks ahead, against what was actually reported.")
+        opts = ["All selected wards"] + sorted(b["ward_id"].unique())
+        who = pick.selectbox("Show", opts, format_func=lambda w: w if w == opts[0] else ward_label(w),
+                             key="mc_who", label_visibility="collapsed")
+        if who == opts[0]:
+            d = b.groupby("target_date")[["actual", "expected"]].sum().reset_index()
+            traces = []
+        else:
+            d = b[b["ward_id"] == who].sort_values("target_date")
+            traces = [
+                go.Scatter(x=d["target_date"], y=d["upper_80"], line=dict(width=0), showlegend=False, hoverinfo="skip"),
+                go.Scatter(x=d["target_date"], y=d["lower_80"], line=dict(width=0), fill="tonexty",
+                           fillcolor="rgba(14,115,105,0.14)", name="80% range", hoverinfo="skip"),
+            ]
+        traces += [
+            go.Scatter(x=d["target_date"], y=d["actual"], name="Reported", line=dict(color=theme.INK, width=2.2),
+                       hovertemplate="%{y:.0f} reported<extra></extra>"),
+            go.Scatter(x=d["target_date"], y=d["expected"], name="Forecast", line=dict(color=theme.ACCENT, width=2.4, dash="dot"),
+                       hovertemplate="%{y:.1f} forecast<extra></extra>"),
         ]
-    traces += [
-        go.Scatter(x=d["target_date"], y=d["actual"], name="Reported", line=dict(color=theme.INK, width=2.2),
-                   hovertemplate="%{y:.0f} reported<extra></extra>"),
-        go.Scatter(x=d["target_date"], y=d["expected"], name="Forecast", line=dict(color=theme.ACCENT, width=2.4, dash="dot"),
-                   hovertemplate="%{y:.1f} forecast<extra></extra>"),
-    ]
-    fig = go.Figure(traces)
-    fig.update_layout(hovermode="x unified")
-    theme.plot(fig, 340)
+        fig = go.Figure(traces)
+        fig.update_layout(hovermode="x unified")
+        theme.plot(fig, 340)
+
+
+replay()
 
 theme.gap()
 

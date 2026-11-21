@@ -64,7 +64,7 @@ with left:
         st.html(
             f"""<div class="m-hero">
                   <div class="k">Week of {state.fmt_week(main['target_date'])}</div>
-                  <div class="tier" style="color:{tier.color}">{tier.name} risk</div>
+                  <div class="tier" style="color:{tier.ink}">{tier.name} risk</div>
                   <div class="num"><b>{main['expected_cases']:.1f}</b> expected cases, likely between
                     {main['lower_80']:.1f} and {main['upper_80']:.1f}.{upside}</div>{early}{replay}
                   <div class="m-act"><div class="h">{theme.icon('task_alt')}{tier.action}</div>
@@ -82,7 +82,7 @@ with right:
             steps.append(
                 f'<div class="m-step{" on" if r["horizon"] == horizon else ""}">'
                 f'<div class="h">In {r["horizon"]} weeks, {state.fmt_short(r["target_date"])}</div>'
-                f'<div class="c" style="color:{t.color}">{r["expected_cases"]:.1f}</div>'
+                f'<div class="c" style="color:{t.ink}">{r["expected_cases"]:.1f}</div>'
                 f'<div class="r">{r["tier"]}, {r["lower_80"]:.0f} to {r["upper_80"]:.0f} cases</div></div>'
             )
         st.html(f'<div class="m-steps">{"".join(steps)}</div>')
@@ -113,7 +113,7 @@ with st.container(key="card-evidence"):
                     opacity=0.35, marker_line_width=0, secondary_y=True,
                     hovertemplate="%{x|%d %b}: %{y:.0f} mm<extra></extra>")
         fig.add_scatter(x=hist[C.DATE_COL], y=hist[C.TARGET_COL], name="Reported cases", mode="lines",
-                        line=dict(color=theme.INK, width=2.4, shape="spline"),
+                        line=dict(color=theme.INK, width=2.4),
                         hovertemplate="%{x|%d %b}: %{y:.0f} cases<extra></extra>")
         fig.add_scatter(x=outlook["target_date"], y=outlook["upper_80"], mode="lines", line=dict(width=0),
                         showlegend=False, hoverinfo="skip")
@@ -121,7 +121,7 @@ with st.container(key="card-evidence"):
                         fill="tonexty", fillcolor="rgba(14,115,105,0.14)", name="80% range", hoverinfo="skip")
         fig.add_scatter(x=outlook["target_date"], y=outlook["expected_cases"], name="Forecast", mode="lines+markers",
                         line=dict(color=theme.ACCENT, width=2.6, dash="dot"),
-                        marker=dict(size=10, color=[TIERS[t].color for t in outlook["tier"]],
+                        marker=dict(size=10, color=[TIERS[t].ink for t in outlook["tier"]],
                                     line=dict(color=theme.BASE, width=2)),
                         hovertemplate="%{x|%d %b}: %{y:.1f} expected<extra></extra>")
         if not after.empty:
@@ -156,28 +156,34 @@ with st.container(key="card-evidence"):
 
 theme.gap()
 
-with st.container(key="card-whatif"):
-    theme.card_title("What if the weather changed?",
-                     "Adjust the last two weeks of weather. Moshari rebuilds the lag features and runs the model again.")
-    with st.container(key="tray-sliders"):
-        w1, w2, w3 = st.columns(3)
-        rain = w1.slider("Rainfall", 0.0, 3.0, 1.0, 0.1, format="×%.1f", key="wi_rain")
-        temp = w2.slider("Temperature", -4.0, 4.0, 0.0, 0.5, format="%+.1f °C", key="wi_temp")
-        hum = w3.slider("Humidity", -20.0, 20.0, 0.0, 1.0, format="%+.0f pts", key="wi_hum")
-    scenario = Scenario(rain, temp, hum)
-    if scenario.is_baseline:
-        st.html('<p class="m-note">Move a slider to compare a scenario with the forecast above.</p>')
-    else:
-        alt = svc.ward_outlook(ward, issue_date, scenario)
-        steps = []
-        for (_, a), (_, b) in zip(alt.iterrows(), outlook.iterrows()):
-            d = a["expected_cases"] - b["expected_cases"]
-            color = TIERS["Critical"].color if d > 0.05 else (theme.ACCENT if d < -0.05 else theme.MUTED)
-            steps.append(
-                f'<div class="m-step"><div class="h">In {a["horizon"]} weeks</div>'
-                f'<div class="c" style="color:{TIERS[a["tier"]].color}">{a["expected_cases"]:.1f}</div>'
-                f'<div class="r"><span style="color:{color};font-weight:700">{d:+.1f}</span> vs forecast, {a["tier"]}</div></div>'
-            )
-        st.html(f'<div class="m-steps">{"".join(steps)}</div>')
+@st.fragment
+def what_if() -> None:
+    """Runs on its own: moving a slider re-runs only this card, not the whole page."""
+    with st.container(key="card-whatif"):
+        theme.card_title("What if the weather changed?",
+                         "Adjust the last two weeks of weather. Moshari rebuilds the lag features and runs the model again.")
+        with st.container(key="tray-sliders"):
+            w1, w2, w3 = st.columns(3)
+            rain = w1.slider("Rainfall", 0.0, 3.0, 1.0, 0.1, format="×%.1f", key="wi_rain")
+            temp = w2.slider("Temperature", -4.0, 4.0, 0.0, 0.5, format="%+.1f °C", key="wi_temp")
+            hum = w3.slider("Humidity", -20.0, 20.0, 0.0, 1.0, format="%+.0f pts", key="wi_hum")
+        scenario = Scenario(rain, temp, hum)
+        if scenario.is_baseline:
+            st.html('<p class="m-note">Move a slider to compare a scenario with the forecast above.</p>')
+        else:
+            alt = svc.ward_outlook(ward, issue_date, scenario)
+            steps = []
+            for (_, a), (_, b) in zip(alt.iterrows(), outlook.iterrows()):
+                d = a["expected_cases"] - b["expected_cases"]
+                color = TIERS["Critical"].color if d > 0.05 else (theme.ACCENT if d < -0.05 else theme.MUTED)
+                steps.append(
+                    f'<div class="m-step"><div class="h">In {a["horizon"]} weeks</div>'
+                    f'<div class="c" style="color:{TIERS[a["tier"]].ink}">{a["expected_cases"]:.1f}</div>'
+                    f'<div class="r"><span style="color:{color};font-weight:700">{d:+.1f}</span> vs forecast, {a["tier"]}</div></div>'
+                )
+            st.html(f'<div class="m-steps">{"".join(steps)}</div>')
+
+
+what_if()
 
 theme.footer(svc.bundle.metadata)
