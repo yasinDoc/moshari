@@ -1,0 +1,17 @@
+[server]
+headless = true
+runOnSave = false
+maxUploadSize = 50
+
+[browser]
+gatherUsageStats = false
+
+[theme]
+base = "light"
+primaryColor = "#0F6E6A"
+backgroundColor = "#F3F6F4"
+secondaryBackgroundColor = "#E6EEEA"
+textColor = "#14213D"
+
+[client]
+toolbarMode = "minimal"

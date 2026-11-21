@@ -1,0 +1,398 @@
+{
+  "horizons": {
+    "2": {
+      "rounds": {
+        "mean": 533,
+        "q10": 1508,
+        "q90": 189
+      },
+      "n_train": 24420,
+      "n_test": 6300,
+      "model": {
+        "mae": 1.007394012926417,
+        "rmse": 2.052495656223264,
+        "tier_accuracy": 0.8334920634920635,
+        "tier_within_one": 0.993015873015873,
+        "tier_macro_f1": 0.5948397168318165,
+        "alert_recall": 0.691609977324263,
+        "alert_precision": 0.6971428571428572
+      },
+      "baselines": {
+        "persistence": {
+          "mae": 1.6587301587301588,
+          "rmse": 3.2962219835865674
+        },
+        "seasonal_naive": {
+          "mae": 1.6933333333333334,
+          "rmse": 3.5826300528017256
+        },
+        "climatology": {
+          "mae": 1.243265306122449,
+          "rmse": 2.437246078739632
+        }
+      },
+      "interval_coverage_80": 0.822063492063492,
+      "interval_offset": 0.0006000702229644379,
+      "interval_mean_width": 2.634611083180556,
+      "confusion": {
+        "Low": {
+          "Low": 4137,
+          "Medium": 194,
+          "High": 0,
+          "Critical": 0
+        },
+        "Medium": {
+          "Low": 113,
+          "Medium": 709,
+          "High": 261,
+          "Critical": 11
+        },
+        "High": {
+          "Low": 12,
+          "Medium": 232,
+          "High": 358,
+          "Critical": 140
+        },
+        "Critical": {
+          "Low": 1,
+          "Medium": 20,
+          "High": 65,
+          "Critical": 47
+        }
+      },
+      "mae_improvement_vs_best_baseline": 0.18971919511827928
+    },
+    "3": {
+      "rounds": {
+        "mean": 372,
+        "q10": 2458,
+        "q90": 162
+      },
+      "n_train": 24360,
+      "n_test": 6300,
+      "model": {
+        "mae": 1.0343821428009758,
+        "rmse": 2.0336806383396118,
+        "tier_accuracy": 0.8296825396825397,
+        "tier_within_one": 0.9923809523809524,
+        "tier_macro_f1": 0.6049377341675318,
+        "alert_recall": 0.7052154195011338,
+        "alert_precision": 0.6724324324324324
+      },
+      "baselines": {
+        "persistence": {
+          "mae": 1.8693650793650793,
+          "rmse": 3.579638183365677
+        },
+        "seasonal_naive": {
+          "mae": 1.6933333333333334,
+          "rmse": 3.5826300528017256
+        },
+        "climatology": {
+          "mae": 1.243265306122449,
+          "rmse": 2.437246078739632
+        }
+      },
+      "interval_coverage_80": 0.8015873015873016,
+      "interval_offset": 0.0002893443553128149,
+      "interval_mean_width": 2.652028978132566,
+      "confusion": {
+        "Low": {
+          "Low": 4144,
+          "Medium": 228,
+          "High": 1,
+          "Critical": 0
+        },
+        "Medium": {
+          "Low": 99,
+          "Medium": 644,
+          "High": 245,
+          "Critical": 14
+        },
+        "High": {
+          "Low": 19,
+          "Medium": 270,
+          "High": 383,
+          "Critical": 128
+        },
+        "Critical": {
+          "Low": 1,
+          "Medium": 13,
+          "High": 55,
+          "Critical": 56
+        }
+      },
+      "mae_improvement_vs_best_baseline": 0.168011736749051
+    },
+    "4": {
+      "rounds": {
+        "mean": 361,
+        "q10": 277,
+        "q90": 141
+      },
+      "n_train": 24300,
+      "n_test": 6300,
+      "model": {
+        "mae": 1.1904407865974664,
+        "rmse": 2.3277070305914096,
+        "tier_accuracy": 0.8123809523809524,
+        "tier_within_one": 0.986984126984127,
+        "tier_macro_f1": 0.55971497649937,
+        "alert_recall": 0.7029478458049887,
+        "alert_precision": 0.6144697720515362
+      },
+      "baselines": {
+        "persistence": {
+          "mae": 2.055873015873016,
+          "rmse": 3.848974301629354
+        },
+        "seasonal_naive": {
+          "mae": 1.6933333333333334,
+          "rmse": 3.5826300528017256
+        },
+        "climatology": {
+          "mae": 1.243265306122449,
+          "rmse": 2.437246078739632
+        }
+      },
+      "interval_coverage_80": 0.8468253968253968,
+      "interval_offset": 0.0007609103160640319,
+      "interval_mean_width": 3.1753991287534626,
+      "confusion": {
+        "Low": {
+          "Low": 4099,
+          "Medium": 187,
+          "High": 0,
+          "Critical": 0
+        },
+        "Medium": {
+          "Low": 146,
+          "Medium": 597,
+          "High": 238,
+          "Critical": 24
+        },
+        "High": {
+          "Low": 18,
+          "Medium": 331,
+          "High": 382,
+          "Critical": 134
+        },
+        "Critical": {
+          "Low": 0,
+          "Medium": 40,
+          "High": 64,
+          "Critical": 40
+        }
+      },
+      "mae_improvement_vs_best_baseline": 0.042488533432766706
+    }
+  },
+  "metadata": {
+    "trained_through": "2023-12-31",
+    "production": false,
+    "split": {
+      "train_end": "2022-12-31",
+      "valid_end": "2023-12-31"
+    },
+    "data_fingerprint": "9220f5ae7ed0",
+    "data_rows": 31320,
+    "wards": 60,
+    "lightgbm_version": "4.7.0",
+    "trained_at": "2026-11-21T18:13:24",
+    "feature_count": 33
+  },
+  "tier_thresholds": [
+    2.0,
+    7.0,
+    13.0
+  ],
+  "lag_correlations": [
+    {
+      "lag_weeks": 0,
+      "correlation": 0.531192385484632
+    },
+    {
+      "lag_weeks": 1,
+      "correlation": 0.591317713845226
+    },
+    {
+      "lag_weeks": 2,
+      "correlation": 0.6721890149064851
+    },
+    {
+      "lag_weeks": 3,
+      "correlation": 0.7500702637012606
+    },
+    {
+      "lag_weeks": 4,
+      "correlation": 0.6806717721771555
+    },
+    {
+      "lag_weeks": 5,
+      "correlation": 0.542031004910519
+    },
+    {
+      "lag_weeks": 6,
+      "correlation": 0.4969650154571088
+    },
+    {
+      "lag_weeks": 7,
+      "correlation": 0.4640548744686015
+    },
+    {
+      "lag_weeks": 8,
+      "correlation": 0.41170156773889055
+    },
+    {
+      "lag_weeks": 9,
+      "correlation": 0.3827984602317707
+    },
+    {
+      "lag_weeks": 10,
+      "correlation": 0.2938493902244654
+    }
+  ],
+  "feature_importance": {
+    "2": {
+      "humidity_mean_4w": 0.3910854224205089,
+      "rain_sum_2w": 0.26883993214383584,
+      "rain_sum_4w": 0.11784938121426665,
+      "week_cos": 0.03990540669121436,
+      "humidity_mean_2w": 0.03728501720904471,
+      "vulnerability_index": 0.02634132619497372,
+      "rain_lag_1w": 0.02454519559414796,
+      "rain_sum_8w": 0.012434103763230812,
+      "week_sin": 0.008531746626308666,
+      "rain_lag_2w": 0.008391981947076865,
+      "temp_mean_4w": 0.008319022975606329,
+      "water_logging_risk_index": 0.0069981987501163455,
+      "rain_lag_0w": 0.00596207444994361,
+      "rain_lag_3w": 0.0044189892868423996,
+      "temp_range_4w": 0.0040238280775444744,
+      "temp_lag_3w": 0.00401856221022203,
+      "rain_lag_4w": 0.003932155219768542,
+      "rain_breeding_window": 0.003701602841182191,
+      "cases_mean_4w": 0.0031321372929425475,
+      "temp_mean_2w": 0.0031198078879299163,
+      "rain_lag_8w": 0.002852880229644961,
+      "rain_lag_5w": 0.002625122540155502,
+      "population_density_sqkm": 0.0024061608825258467,
+      "rain_lag_7w": 0.002281324392370939,
+      "rain_lag_6w": 0.002012255008449116,
+      "humidity_lag_3w": 0.0017277574748362794,
+      "sanitation_score": 0.0010161236201021078,
+      "cases_trend_2w": 0.0006267053227018949,
+      "cases_lag_0w": 0.0004399356238288363,
+      "cases_lag_1w": 0.000407251454360556,
+      "cases_lag_2w": 0.00037087462269515075,
+      "city_code": 0.00020386843353900733,
+      "heavy_rain_weeks_4w": 0.00019384759808292572
+    },
+    "3": {
+      "rain_sum_2w": 0.5495954804983807,
+      "rain_lag_0w": 0.13579079951526574,
+      "week_cos": 0.08842317918549314,
+      "week_sin": 0.05835938193180982,
+      "humidity_mean_2w": 0.04549288218808062,
+      "vulnerability_index": 0.02644804482440565,
+      "temp_mean_2w": 0.011181459218127484,
+      "temp_mean_4w": 0.01112447211559701,
+      "cases_mean_4w": 0.008291828308815937,
+      "rain_sum_8w": 0.007649526729939837,
+      "water_logging_risk_index": 0.006462535136259815,
+      "temp_range_4w": 0.005207663775999003,
+      "rain_lag_8w": 0.004848967832691883,
+      "rain_sum_4w": 0.0046335905990810685,
+      "rain_lag_4w": 0.004408056515769488,
+      "rain_lag_3w": 0.0036378627507260186,
+      "rain_breeding_window": 0.0034179164482720614,
+      "humidity_mean_4w": 0.0032572725974117046,
+      "rain_lag_1w": 0.003202055483619377,
+      "rain_lag_7w": 0.002725587215472255,
+      "rain_lag_2w": 0.0024345692898304692,
+      "population_density_sqkm": 0.0024064290139382692,
+      "rain_lag_5w": 0.0021979737166300823,
+      "rain_lag_6w": 0.0018449506575105854,
+      "temp_lag_3w": 0.0016852865572249854,
+      "heavy_rain_weeks_4w": 0.0016522725740544444,
+      "humidity_lag_3w": 0.0014544613736734136,
+      "sanitation_score": 0.0008271667856151885,
+      "cases_lag_0w": 0.000493349384096833,
+      "cases_lag_2w": 0.00033336734971954255,
+      "cases_trend_2w": 0.0002143553265123149,
+      "cases_lag_1w": 0.00016574838090534433,
+      "city_code": 0.0001315067190699387
+    },
+    "4": {
+      "week_cos": 0.410693531716277,
+      "humidity_mean_2w": 0.20278756786902608,
+      "week_sin": 0.10196327167414466,
+      "rain_lag_0w": 0.06975540885265856,
+      "temp_mean_4w": 0.04163881175614398,
+      "rain_sum_4w": 0.028739451243418895,
+      "rain_sum_2w": 0.02679844206292801,
+      "vulnerability_index": 0.026296775609120904,
+      "rain_sum_8w": 0.01535365515673985,
+      "temp_range_4w": 0.011859034021373371,
+      "water_logging_risk_index": 0.006592358031131004,
+      "temp_mean_2w": 0.005624810433434047,
+      "rain_lag_2w": 0.005456407624609948,
+      "rain_lag_6w": 0.004981110995805854,
+      "rain_lag_8w": 0.0048846181403911955,
+      "rain_lag_4w": 0.004676631555231461,
+      "rain_lag_3w": 0.00417969395158051,
+      "rain_lag_7w": 0.003742395711010993,
+      "temp_lag_3w": 0.0036744987638391616,
+      "rain_lag_5w": 0.003431169102288312,
+      "rain_breeding_window": 0.002975569902871476,
+      "rain_lag_1w": 0.0028717247497322047,
+      "humidity_lag_3w": 0.002478562813565514,
+      "population_density_sqkm": 0.0022722614484766285,
+      "humidity_mean_4w": 0.002126466734555066,
+      "cases_mean_4w": 0.0010420865441611803,
+      "sanitation_score": 0.0009780998229537105,
+      "cases_lag_1w": 0.0008560542007985346,
+      "cases_trend_2w": 0.00039936907114156535,
+      "cases_lag_2w": 0.00030583237901406066,
+      "heavy_rain_weeks_4w": 0.0003054379159171778,
+      "cases_lag_0w": 0.00015663758838256188,
+      "city_code": 0.000102252557276538
+    }
+  },
+  "feature_labels": {
+    "rain_lag_0w": "Rainfall this week",
+    "rain_lag_1w": "Rainfall 1 wk ago",
+    "rain_lag_2w": "Rainfall 2 wk ago",
+    "rain_lag_3w": "Rainfall 3 wk ago",
+    "rain_lag_4w": "Rainfall 4 wk ago",
+    "rain_lag_5w": "Rainfall 5 wk ago",
+    "rain_lag_6w": "Rainfall 6 wk ago",
+    "rain_lag_7w": "Rainfall 7 wk ago",
+    "rain_lag_8w": "Rainfall 8 wk ago",
+    "rain_sum_2w": "Rainfall, last 2 wks",
+    "rain_sum_4w": "Rainfall, last 4 wks",
+    "rain_sum_8w": "Rainfall, last 8 wks",
+    "rain_breeding_window": "Rainfall 2\u20134 wks ago (breeding window)",
+    "heavy_rain_weeks_4w": "Heavy-rain weeks (>50 mm), last 4",
+    "temp_mean_2w": "Avg temperature, last 2 wks",
+    "temp_mean_4w": "Avg temperature, last 4 wks",
+    "temp_lag_3w": "Avg temperature 3 wks ago",
+    "temp_range_4w": "Day\u2013night temperature range, 4 wks",
+    "humidity_mean_2w": "Humidity, last 2 wks",
+    "humidity_mean_4w": "Humidity, last 4 wks",
+    "humidity_lag_3w": "Humidity 3 wks ago",
+    "population_density_sqkm": "Population density",
+    "water_logging_risk_index": "Water-logging risk",
+    "sanitation_score": "Sanitation score",
+    "vulnerability_index": "Composite vulnerability",
+    "city_code": "City corporation",
+    "cases_lag_0w": "Cases this week",
+    "cases_lag_1w": "Cases last week",
+    "cases_lag_2w": "Cases 2 wks ago",
+    "cases_mean_4w": "Avg weekly cases, last 4 wks",
+    "cases_trend_2w": "Case trend (2-wk change)",
+    "week_sin": "Time of year (sin)",
+    "week_cos": "Time of year (cos)"
+  },
+  "train_seconds": 62.5
+}

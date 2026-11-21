@@ -1,0 +1,4 @@
+# Optional REST API (uvicorn moshari.api:app --app-dir src)
+-r requirements.txt
+fastapi>=0.110
+uvicorn>=0.29
