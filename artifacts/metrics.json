@@ -88,7 +88,36 @@
         "Balanced": 0.7563025210084033,
         "Cautious": 0.9663865546218487
       },
-      "mae_improvement_vs_best_baseline": 0.18971919511827928
+      "mae_improvement_vs_best_baseline": 0.18971919511827928,
+      "probability": {
+        "High": {
+          "threshold": 0.44,
+          "auc": 0.9601789282219594,
+          "brier": 0.05907463397556589,
+          "recall": 0.7857142857142857,
+          "precision": 0.6650671785028791,
+          "recall_expected_rule": 0.691609977324263,
+          "precision_expected_rule": 0.6971428571428572,
+          "n_actual": 882
+        },
+        "Critical": {
+          "threshold": 0.16999999999999998,
+          "auc": 0.957650910944913,
+          "brier": 0.025568828993065784,
+          "recall": 0.6262626262626263,
+          "precision": 0.3092269326683292,
+          "recall_expected_rule": 0.23737373737373738,
+          "precision_expected_rule": 0.3533834586466165,
+          "n_actual": 198
+        }
+      },
+      "forecast_assisted": {
+        "mae_without_forecast": 1.007394012926417,
+        "mae_realistic_forecast": 1.005430931943692,
+        "mae_perfect_forecast": 1.0084420938592635,
+        "mae_seasonal_average": 1.243265306122449,
+        "n_test": 6300
+      }
     },
     "3": {
       "rounds": {
@@ -178,7 +207,36 @@
         "Balanced": 0.5714285714285714,
         "Cautious": 0.8991596638655462
       },
-      "mae_improvement_vs_best_baseline": 0.168011736749051
+      "mae_improvement_vs_best_baseline": 0.168011736749051,
+      "probability": {
+        "High": {
+          "threshold": 0.41,
+          "auc": 0.9571657505133222,
+          "brier": 0.06156838300966102,
+          "recall": 0.828798185941043,
+          "precision": 0.6318063958513397,
+          "recall_expected_rule": 0.7052154195011338,
+          "precision_expected_rule": 0.6724324324324324,
+          "n_actual": 882
+        },
+        "Critical": {
+          "threshold": 0.18,
+          "auc": 0.9517843131412453,
+          "brier": 0.02555063959147935,
+          "recall": 0.702020202020202,
+          "precision": 0.3068432671081678,
+          "recall_expected_rule": 0.2828282828282828,
+          "precision_expected_rule": 0.448,
+          "n_actual": 198
+        }
+      },
+      "forecast_assisted": {
+        "mae_without_forecast": 1.0343821428009758,
+        "mae_realistic_forecast": 1.0204156316557387,
+        "mae_perfect_forecast": 1.018565629187055,
+        "mae_seasonal_average": 1.243265306122449,
+        "n_test": 6300
+      }
     },
     "4": {
       "rounds": {
@@ -268,7 +326,36 @@
         "Balanced": 0.5714285714285714,
         "Cautious": 0.8823529411764706
       },
-      "mae_improvement_vs_best_baseline": 0.042488533432766706
+      "mae_improvement_vs_best_baseline": 0.042488533432766706,
+      "probability": {
+        "High": {
+          "threshold": 0.4,
+          "auc": 0.9446229457699162,
+          "brier": 0.07123791436745514,
+          "recall": 0.8412698412698413,
+          "precision": 0.5677123182861515,
+          "recall_expected_rule": 0.7029478458049887,
+          "precision_expected_rule": 0.6144697720515362,
+          "n_actual": 882
+        },
+        "Critical": {
+          "threshold": 0.11,
+          "auc": 0.9181084857092724,
+          "brier": 0.030249354511458156,
+          "recall": 0.7323232323232324,
+          "precision": 0.16477272727272727,
+          "recall_expected_rule": 0.20202020202020202,
+          "precision_expected_rule": 0.2777777777777778,
+          "n_actual": 198
+        }
+      },
+      "forecast_assisted": {
+        "mae_without_forecast": 1.1904407865974664,
+        "mae_realistic_forecast": 1.0828911535688632,
+        "mae_perfect_forecast": 1.0718810871572764,
+        "mae_seasonal_average": 1.243265306122449,
+        "n_test": 6300
+      }
     }
   },
   "metadata": {
@@ -282,7 +369,7 @@
     "data_rows": 31320,
     "wards": 60,
     "lightgbm_version": "4.7.0",
-    "trained_at": "2026-11-22T00:23:20",
+    "trained_at": "2026-11-22T01:53:18",
     "feature_count": 33
   },
   "tier_thresholds": [
@@ -478,5 +565,5 @@
     "week_sin": "Time of year (sin)",
     "week_cos": "Time of year (cos)"
   },
-  "train_seconds": 74.6
+  "train_seconds": 130.4
 }

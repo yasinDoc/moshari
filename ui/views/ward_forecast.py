@@ -59,6 +59,16 @@ with left:
         if main["alert"] and main["tier_idx"] < 2:
             early = (f'<p class="m-note" style="margin-top:8px;color:{theme.TIER_COLORS["Critical"]};font-weight:700">'
                      f'On early alert: the upper end of the range reaches High ({policy.lower()} rule).</p>')
+        probs = ""
+        if "p_high" in main and not pd.isna(main["p_high"]):
+            bar = lambda p, c: (f'<span class="pb"><span style="width:{max(p, 0.02) * 100:.0f}%;background:{c}"></span></span>')  # noqa: E731
+            probs = (f'<div class="m-probs">'
+                     f'<div><span>Chance of High</span>{bar(main["p_high"], TIERS["High"].color)}<b>{main["p_high"]:.0%}</b></div>'
+                     f'<div><span>Chance of Critical</span>{bar(main["p_crit"], TIERS["Critical"].color)}<b>{main["p_crit"]:.0%}</b></div>'
+                     f'</div>')
+            if bool(main.get("crit_watch")) and main["tier"] != "Critical":
+                probs += (f'<p class="m-note" style="margin-top:6px;color:{theme.TIER_COLORS["Critical"]};font-weight:700">'
+                          'Critical watch: outbreak-level cases are likely enough to prepare.</p>')
         replay = ("" if np.isnan(main["actual"]) else
                   f'<p class="m-note" style="margin-top:8px">Replay check: {main["actual"]:.0f} cases were reported that week.</p>')
         st.html(
@@ -66,7 +76,7 @@ with left:
                   <div class="k">Week of {state.fmt_week(main['target_date'])}</div>
                   <div class="tier" style="color:{tier.ink}">{tier.name} risk</div>
                   <div class="num"><b>{main['expected_cases']:.1f}</b> expected cases, likely between
-                    {main['lower_80']:.1f} and {main['upper_80']:.1f}.{upside}</div>{early}{replay}
+                    {main['lower_80']:.1f} and {main['upper_80']:.1f}.{upside}</div>{probs}{early}{replay}
                   <div class="m-act"><div class="h">{theme.icon('task_alt')}{tier.action}</div>
                     <div class="b">{tier.detail}</div></div>
                 </div>"""
@@ -83,7 +93,9 @@ with right:
                 f'<div class="m-step{" on" if r["horizon"] == horizon else ""}">'
                 f'<div class="h">In {r["horizon"]} weeks, {state.fmt_short(r["target_date"])}</div>'
                 f'<div class="c" style="color:{t.ink}">{r["expected_cases"]:.1f}</div>'
-                f'<div class="r">{r["tier"]}, {r["lower_80"]:.0f} to {r["upper_80"]:.0f} cases</div></div>'
+                f'<div class="r">{r["tier"]}, {r["lower_80"]:.0f} to {r["upper_80"]:.0f} cases</div>'
+                + (f'<div class="r">Chance of Critical {r["p_crit"]:.0%}</div>' if "p_crit" in r else "")
+                + '</div>'
             )
         st.html(f'<div class="m-steps">{"".join(steps)}</div>')
         g = groups.sort_values("log_effect", ascending=False)

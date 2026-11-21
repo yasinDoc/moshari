@@ -33,9 +33,12 @@ class Scenario:
 
 
 class ForecastService:
-    def __init__(self, raw: pd.DataFrame, bundle: ForecastBundle):
+    def __init__(self, raw: pd.DataFrame, bundle: ForecastBundle, use_forecast: bool = False):
+        """``use_forecast``: rows carry weather for the weeks after the issue week (live mode),
+        so the forecast-assisted models are used where available."""
         self.raw = raw.sort_values([C.WARD_COL, C.DATE_COL]).reset_index(drop=True)
         self.bundle = bundle
+        self.use_forecast = use_forecast
         self.features = build_features(self.raw, bundle.city_categories)
         complete = self.features.dropna(subset=FEATURE_COLS)
         self.features = complete.set_index([C.WARD_COL, C.DATE_COL], drop=False).sort_index()
@@ -69,7 +72,7 @@ class ForecastService:
         rows = self.features.xs(pd.Timestamp(issue_date), level=C.DATE_COL, drop_level=False)
         if cities:
             rows = rows[rows[C.CITY_COL].isin(cities)]
-        pred = self.bundle.predict(rows, horizon)
+        pred = self.bundle.predict(rows, horizon, self.use_forecast)
         out = pd.concat(
             [rows[[C.WARD_COL, C.CITY_COL, C.DATE_COL, "cases_lag_0w", "rain_breeding_window",
                    "vulnerability_index"]].reset_index(drop=True),
@@ -87,7 +90,7 @@ class ForecastService:
         rows = self.features.loc[idx[:, list(pd.DatetimeIndex(issue_dates))], :]
         if cities:
             rows = rows[rows[C.CITY_COL].isin(cities)]
-        pred = self.bundle.predict(rows, horizon)
+        pred = self.bundle.predict(rows, horizon, self.use_forecast)
         return pd.DataFrame(
             {
                 C.WARD_COL: rows[C.WARD_COL].to_numpy(),
@@ -103,7 +106,7 @@ class ForecastService:
         row = self.ward_row(ward_id, issue_date, scenario)
         frames = []
         for h in self.bundle.horizons:
-            p = self.bundle.predict(row, h).iloc[0].to_dict()
+            p = self.bundle.predict(row, h, self.use_forecast).iloc[0].to_dict()
             target = pd.Timestamp(issue_date) + pd.Timedelta(weeks=h)
             frames.append({"horizon": h, "target_date": target, "actual": self._actual(ward_id, target), **p})
         return pd.DataFrame(frames)

@@ -21,7 +21,7 @@ import numpy as np
 import pandas as pd
 
 from . import config as C
-from .features import CATEGORICAL_FEATURES, FEATURE_COLS, FEATURE_SPECS, DRIVER_GROUPS
+from .features import CATEGORICAL_FEATURES, FEATURE_COLS, FEATURE_SPECS, DRIVER_GROUPS, LEAD_COLS
 from .risk import assign_tier
 
 BASE_PARAMS: dict[str, Any] = {
@@ -40,12 +40,17 @@ BASE_PARAMS: dict[str, Any] = {
 }
 
 KINDS = ("mean", "q10", "q90")
+# Probability of reaching High / Critical, and a mean model that also sees the weather forecast.
+PROB_KINDS = {"p_high": "High", "p_crit": "Critical"}
+FORECAST_KIND = "fc_mean"
 
 
 def _params(kind: str) -> dict[str, Any]:
     p = dict(BASE_PARAMS)
-    if kind == "mean":
+    if kind in ("mean", FORECAST_KIND):
         p.update(objective="poisson", metric="poisson")
+    elif kind in PROB_KINDS:
+        p.update(objective="binary", metric="binary_logloss")
     else:
         alpha = C.QUANTILES[0] if kind == "q10" else C.QUANTILES[1]
         p.update(objective="quantile", alpha=alpha, metric="quantile")
@@ -107,6 +112,9 @@ class ForecastBundle:
     feature_cols: list[str] = field(default_factory=lambda: list(FEATURE_COLS))
     # Conformal (CQR) widening per horizon, calibrated on the validation year.
     interval_offsets: dict[int, float] = field(default_factory=dict)
+    # Probability cut-offs for "High watch" / "Critical watch", tuned on the validation year.
+    prob_thresholds: dict[int, dict[str, float]] = field(default_factory=dict)
+    lead_cols: list[str] = field(default_factory=lambda: list(LEAD_COLS))
 
     # ------------------------------------------------------------------ io
     def save(self, path: Path = C.MODEL_PATH) -> Path:
@@ -119,6 +127,8 @@ class ForecastBundle:
             "metadata": self.metadata,
             "feature_cols": self.feature_cols,
             "interval_offsets": {str(h): v for h, v in self.interval_offsets.items()},
+            "prob_thresholds": {str(h): v for h, v in self.prob_thresholds.items()},
+            "lead_cols": self.lead_cols,
         }
         joblib.dump(payload, path, compress=3)
         return path
@@ -141,6 +151,8 @@ class ForecastBundle:
             metadata=payload["metadata"],
             feature_cols=payload["feature_cols"],
             interval_offsets={int(h): float(v) for h, v in payload.get("interval_offsets", {}).items()},
+            prob_thresholds={int(h): v for h, v in payload.get("prob_thresholds", {}).items()},
+            lead_cols=payload.get("lead_cols", list(LEAD_COLS)),
         )
 
     # ----------------------------------------------------------- inference
@@ -151,8 +163,15 @@ class ForecastBundle:
     def _X(self, features: pd.DataFrame) -> pd.DataFrame:
         return features[self.feature_cols]
 
-    def predict(self, features: pd.DataFrame, horizon: int) -> pd.DataFrame:
-        """Expected cases, 80% interval and risk tier for each feature row."""
+    def has_forecast_model(self, horizon: int) -> bool:
+        return (horizon, FORECAST_KIND) in self.boosters
+
+    def predict(self, features: pd.DataFrame, horizon: int, use_forecast: bool = False) -> pd.DataFrame:
+        """Expected cases, 80% interval, risk tier and outbreak probabilities per row.
+
+        With ``use_forecast`` (and lead weather columns present), expected cases come
+        from the forecast-assisted model, and the interval is rescaled to match.
+        """
         X = self._X(features)
         mean = np.clip(self.boosters[(horizon, "mean")].predict(X), 0, None)
         lo, hi = interval(
@@ -161,6 +180,17 @@ class ForecastBundle:
             mean,
             self.interval_offsets.get(horizon, 0.0),
         )
+        used_forecast = False
+        if use_forecast and self.has_forecast_model(horizon) and set(self.lead_cols) <= set(features.columns):
+            XF = features[[*self.feature_cols, *self.lead_cols]]
+            ok = XF[self.lead_cols].notna().all(axis=1).to_numpy()
+            if ok.any():
+                fc = np.clip(self.boosters[(horizon, FORECAST_KIND)].predict(XF), 0, None)
+                ratio = np.where(mean > 1e-6, fc / np.maximum(mean, 1e-6), 1.0)
+                mean = np.where(ok, fc, mean)
+                lo = np.where(ok, np.minimum(lo * ratio, mean), lo)
+                hi = np.where(ok, np.maximum(hi * ratio, mean), hi)
+                used_forecast = True
         tier_idx = assign_tier(mean, self.tier_thresholds)
         upside_idx = assign_tier(hi, self.tier_thresholds)
         return pd.DataFrame(
@@ -171,9 +201,25 @@ class ForecastBundle:
                 "tier_idx": tier_idx,
                 "tier": [C.TIER_NAMES[i] for i in tier_idx],
                 "upside_tier": [C.TIER_NAMES[i] for i in upside_idx],
+                **self._probabilities(X, horizon),
+                "used_forecast": used_forecast,
             },
             index=features.index,
         )
+
+    def _probabilities(self, X: pd.DataFrame, horizon: int) -> dict[str, np.ndarray]:
+        """P(cases reach High) and P(cases reach Critical), plus the tuned watch flags."""
+        out: dict[str, np.ndarray] = {}
+        thr = self.prob_thresholds.get(horizon, {})
+        for kind in PROB_KINDS:
+            if (horizon, kind) not in self.boosters:
+                continue
+            p = self.boosters[(horizon, kind)].predict(X)
+            out[kind] = p
+            out[kind.replace("p_", "") + "_watch"] = p >= thr.get(kind, 0.5)
+        if "p_high" in out and "p_crit" in out:
+            out["p_crit"] = np.minimum(out["p_crit"], out["p_high"])  # Critical implies High
+        return out
 
     def explain(self, features: pd.DataFrame, horizon: int) -> pd.DataFrame:
         """Per-feature contributions (TreeSHAP, computed natively by LightGBM).

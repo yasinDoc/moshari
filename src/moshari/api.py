@@ -53,6 +53,9 @@ class WardForecast(BaseModel):
     upside_tier: str
     response: str
     alert: bool = Field(False, description="On the watch list under the chosen alert policy")
+    p_high: Optional[float] = Field(None, description="Probability that cases reach High")
+    p_critical: Optional[float] = Field(None, description="Probability that cases reach Critical")
+    critical_watch: bool = Field(False, description="Critical is likely enough to prepare for")
     actual_cases: Optional[float] = Field(None, description="Reported cases that week, when the data has it")
 
 
@@ -117,6 +120,8 @@ def _forecast_all(issue: pd.Timestamp, horizon: int, city: Optional[str],
             expected_cases=_num(r["expected_cases"]), lower_80=_num(r["lower_80"]), upper_80=_num(r["upper_80"]),
             tier=r["tier"], upside_tier=r["upside_tier"], response=TIERS[r["tier"]].action,
             alert=bool(r["alert"]), actual_cases=_num(r["actual"]),
+            p_high=_num(r.get("p_high")), p_critical=_num(r.get("p_crit")),
+            critical_watch=bool(r.get("crit_watch", False)),
         )
         for _, r in fc.iterrows()
     ]
@@ -200,6 +205,8 @@ def scenario(body: ScenarioIn) -> list[WardForecast]:
             horizon_weeks=int(r["horizon"]), expected_cases=_num(r["expected_cases"]),
             lower_80=_num(r["lower_80"]), upper_80=_num(r["upper_80"]), tier=r["tier"],
             upside_tier=r["upside_tier"], response=TIERS[r["tier"]].action, actual_cases=_num(r["actual"]),
+            p_high=_num(r.get("p_high")), p_critical=_num(r.get("p_crit")),
+            critical_watch=bool(r.get("crit_watch", False)),
         )
         for _, r in out.iterrows()
     ]

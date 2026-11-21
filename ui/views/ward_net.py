@@ -31,16 +31,16 @@ n_high = int((fc["tier_idx"] >= 2).sum())
 n_on = int(fc["alert"].sum())
 n_early = int((fc["alert"] & (fc["tier_idx"] < 2)).sum())
 n_crit = int((fc["tier_idx"] == 3).sum())
-n_up = int(((fc["upside_tier"] == "Critical") & (fc["tier"] != "Critical")).sum())
+n_cw = int((fc["crit_watch"] | (fc["tier_idx"] == 3)).sum()) if "crit_watch" in fc else n_crit
 on_time = state.metrics().get("horizons", {}).get(str(horizon), {}).get("alert_on_time", {}).get(policy)
 caught = f", alerted in time for {on_time:.0%} of season onsets in testing" if on_time is not None else ""
 by_city = fc.groupby(C.CITY_COL)["tier_idx"].apply(lambda s: (s >= 2).mean()).sort_values(ascending=False)
-crit_color = theme.TIER_COLORS["Critical"] if n_crit else theme.INK
+crit_color = theme.TIER_COLORS["Critical"] if n_cw else theme.INK
 theme.stats([
     ("warning", "Expected high risk", f"{n_high}<small> / {len(fc)} wards</small>",
      (f"{n_early} more on watch ({policy.lower()} rule)" if n_early else "need vector control this week")),
-    ("e911_emergency", "Critical", f"<span style='color:{crit_color}'>{n_crit}</span><small> wards</small>",
-     f"{n_up} more could tip into critical"),
+    ("e911_emergency", "Critical watch", f"<span style='color:{crit_color}'>{n_cw}</span><small> wards</small>",
+     f"{n_crit} expected critical, {n_cw - n_crit if n_cw > n_crit else 0} more likely enough to prepare"),
     ("groups", "Expected cases", f"{fc['expected_cases'].sum():,.0f}", f"across {len(fc)} wards that week"),
     ("location_city", "Hardest-hit city", by_city.index[0] if len(by_city) else "None",
      f"{by_city.iloc[0]:.0%} of its wards high or above" if len(by_city) else ""),

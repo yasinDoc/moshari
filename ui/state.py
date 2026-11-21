@@ -141,13 +141,17 @@ def live_weather(refresh_token: int = 0) -> tuple[pd.DataFrame, dict]:
     return daily, {"source": info.source, "fetched_at": info.fetched_at, "api_calls": info.api_calls}
 
 
-@st.cache_resource(show_spinner="Running the model on live weather…", max_entries=4)
-def live_service(fetched_at: float, through: pd.Timestamp) -> ForecastService:
+@st.cache_resource(show_spinner="Running the model on live weather…", max_entries=8)
+def live_service(fetched_at: float, observed_week: pd.Timestamp, last_week: pd.Timestamp,
+                 use_forecast: bool) -> ForecastService:
+    """Live rows run through the model: ward-adjusted weather, nowcast case history and,
+    when ``use_forecast``, the Open-Meteo rain forecast for the weeks after ``observed_week``."""
     from moshari import live
 
     daily, _ = live_weather(st.session_state.get("live_refresh", 0))
     weekly = live.to_weekly(daily)
-    return ForecastService(live.live_frame(service().raw, weekly, through), get_bundle())
+    frame = live.live_frame(service().raw, weekly, last_week, get_bundle(), nowcast_from=observed_week)
+    return ForecastService(frame, get_bundle(), use_forecast=use_forecast)
 
 
 # --------------------------------------------------------------------------- deep links

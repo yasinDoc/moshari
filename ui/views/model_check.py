@@ -119,6 +119,63 @@ with st.container(key="card-alerts"):
 
 theme.gap()
 
+pl, pr = st.columns(2)
+with pl:
+    with st.container(key="card-prob"):
+        theme.card_title("Catching outbreak weeks",
+                         "Expected cases are an average, so they smooth over peaks. Separate probability models "
+                         "estimate the chance of reaching Critical, which catches far more outbreak weeks.")
+        rows = []
+        for h, v in m["horizons"].items():
+            pc = v.get("probability", {}).get("Critical")
+            if pc:
+                rows.append({"h": f"{h} weeks", "By expected cases": pc["recall_expected_rule"],
+                             "By probability": pc["recall"], "auc": pc["auc"], "prec": pc["precision"]})
+        if rows:
+            df = pd.DataFrame(rows)
+            fig = go.Figure([
+                go.Bar(x=df["h"], y=df["By expected cases"], name="By expected cases", marker_color="#C1B6A0",
+                       marker_line_width=0, text=[f"{v:.0%}" for v in df["By expected cases"]], textposition="outside",
+                       cliponaxis=False),
+                go.Bar(x=df["h"], y=df["By probability"], name="By probability", marker_color=theme.TIER_COLORS["Critical"],
+                       marker_line_width=0, text=[f"{v:.0%}" for v in df["By probability"]], textposition="outside",
+                       cliponaxis=False),
+            ])
+            fig.update_layout(barmode="group", bargap=0.35, bargroupgap=0.08, margin=dict(l=0, r=0, t=40, b=0),
+                              yaxis=dict(range=[0, 1.05], tickformat=".0%", title="Critical weeks caught"))
+            theme.plot(fig, 300)
+            st.html('<p class="m-note">Ranking quality (AUC): ' + ", ".join(
+                f'{r["h"]} {r["auc"]:.2f}' for r in rows) + '. The trade-off is more false alarms: about '
+                f'{1 - rows[1]["prec"]:.0%} of Critical-watch flags at 3 weeks stay below Critical.</p>')
+
+with pr:
+    with st.container(key="card-rainfc"):
+        theme.card_title("Adding a rain forecast",
+                         "Cases 3 to 4 weeks out depend on rain that hasn't fallen yet. Live mode feeds in "
+                         "Open-Meteo's 14-day forecast; this is the gain, tested with realistic forecast error.")
+        rows = []
+        for h, v in m["horizons"].items():
+            fa = v.get("forecast_assisted")
+            if fa:
+                rows.append({"h": f"{h} weeks", **fa})
+        if rows:
+            df = pd.DataFrame(rows)
+            series = [("Seasonal average", "mae_seasonal_average", "#D6CDBB"),
+                      ("Moshari", "mae_without_forecast", "#A69B84"),
+                      ("+ rain forecast", "mae_realistic_forecast", theme.ACCENT)]
+            fig = go.Figure([go.Bar(x=df["h"], y=df[c], name=n, marker_color=col, marker_line_width=0,
+                                    hovertemplate=f"{n}: %{{y:.2f}}<extra></extra>") for n, c, col in series])
+            fig.update_layout(barmode="group", bargap=0.32, bargroupgap=0.08, margin=dict(l=0, r=0, t=40, b=0),
+                              yaxis=dict(title="Average miss (cases)"))
+            theme.plot(fig, 300)
+            r4 = df.iloc[-1]
+            st.html(f'<p class="m-note">At 4 weeks the rain forecast cuts the average miss from '
+                    f'{r4["mae_without_forecast"]:.2f} to {r4["mae_realistic_forecast"]:.2f} cases '
+                    f'({1 - r4["mae_realistic_forecast"] / r4["mae_without_forecast"]:.0%} lower); a perfect forecast '
+                    f'would reach {r4["mae_perfect_forecast"]:.2f}. Forecast error was simulated as ±65% on rain.</p>')
+
+theme.gap()
+
 left, right = st.columns(2)
 with left:
     with st.container(key="card-baselines"):
