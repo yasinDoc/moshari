@@ -1,5 +1,5 @@
 # Runtime — everything needed to launch the dashboard (`streamlit run app.py`)
-streamlit>=1.46
+streamlit>=1.50
 pandas>=2.2
 numpy>=1.26
 lightgbm>=4.3

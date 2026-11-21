@@ -25,13 +25,12 @@ st.set_page_config(
     initial_sidebar_state="auto",
 )
 
-from ui import theme  # noqa: E402
-from ui.state import settings  # noqa: E402
+from ui import state, theme  # noqa: E402
 
 theme.inject_css()
 
 PAGES = [
-    st.Page("ui/views/ward_net.py", title="Ward overview", icon=":material/grid_view:", default=True),
+    st.Page("ui/views/ward_net.py", title="Overview", icon=":material/space_dashboard:", default=True),
     st.Page("ui/views/ward_forecast.py", title="Ward forecast", icon=":material/monitoring:"),
     st.Page("ui/views/model_check.py", title="Model accuracy", icon=":material/verified:"),
     st.Page("ui/views/data_source.py", title="Data", icon=":material/database:"),
@@ -50,8 +49,22 @@ with st.sidebar:
         key = "nav-current" if page.title == nav.title else f"nav-{page.url_path or 'home'}"
         with st.container(key=key):
             st.page_link(page, label=page.title, icon=page.icon)
+
     st.html('<div class="m-side-label">Forecast settings</div>')
-    st.session_state["_controls"] = settings()
-    st.html('<p class="m-foot">Runs locally from a saved model.<br>No external API calls.</p>')
+    st.session_state["_controls"] = state.settings()
+
+    svc = state.service()
+    meta = svc.bundle.metadata
+    st.html(
+        f"""<div class="m-status">
+              <div class="r"><span class="live"></span>Model ready</div>
+              <dl>
+                <dt>Trained through</dt><dd>{meta.get('trained_through', 'unknown')}</dd>
+                <dt>Data to</dt><dd>{state.fmt_week(svc.raw['date'].max())}</dd>
+                <dt>Wards</dt><dd>{len(svc.wards)}</dd>
+                <dt>API calls</dt><dd>None</dd>
+              </dl>
+            </div>"""
+    )
 
 nav.run()

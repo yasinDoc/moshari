@@ -16,12 +16,13 @@ raw = svc.raw
 meta = svc.bundle.metadata
 uploaded = "upload" in state.data_key()
 
-theme.header("Data", state.data_name(), [("Model trained through", meta["trained_through"])])
+theme.header("Data", state.data_name(),
+             [("model_training", "Model trained through", meta["trained_through"])])
 theme.stats([
-    ("Source", "Uploaded" if uploaded else "Bundled", "weekly ward file"),
-    ("Wards", f"{raw[C.WARD_COL].nunique()}", f"in {raw[C.CITY_COL].nunique()} city corporations"),
-    ("Weeks", f"{raw[C.DATE_COL].nunique()}", f"from {raw[C.DATE_COL].min():%Y}"),
-    ("Latest week", raw[C.DATE_COL].max().strftime("%d %b %Y"), "newest forecast can be issued here"),
+    ("inventory_2", "Source", "Uploaded" if uploaded else "Bundled", "weekly ward file"),
+    ("map", "Wards", f"{raw[C.WARD_COL].nunique()}", f"in {raw[C.CITY_COL].nunique()} city corporations"),
+    ("date_range", "Weeks", f"{raw[C.DATE_COL].nunique()}", f"since {raw[C.DATE_COL].min():%Y}"),
+    ("update", "Latest week", raw[C.DATE_COL].max().strftime("%d %b %Y"), "newest week a forecast can use"),
 ])
 
 
@@ -30,11 +31,11 @@ def reset_selection() -> None:
         st.session_state.pop(k, None)
 
 
-left, right = st.columns([6, 5], gap="large")
+left, right = st.columns([3, 2])
 with left:
     with st.container(key="card-upload"):
         theme.card_title("Forecast from a newer file",
-                         "Upload a CSV with the same columns. It is checked before anything is forecast.")
+                         "Upload a CSV with the same columns. It's checked before anything is forecast.")
         up = st.file_uploader("Weekly ward CSV", type=["csv"], label_visibility="collapsed")
         if up is not None:
             payload = up.getvalue()
@@ -49,11 +50,11 @@ with left:
                 if unknown:
                     st.warning(f"New cities for the model: {', '.join(unknown)}. "
                                "Their forecasts rely on weather and ward features only.")
-                if st.button("Use this file", type="primary"):
+                if st.button("Use this file", type="primary", icon=":material/check:"):
                     state.use_upload(payload, up.name)
                     reset_selection()
                     st.rerun()
-        if uploaded and st.button("Back to the bundled dataset"):
+        if uploaded and st.button("Back to the bundled dataset", icon=":material/undo:"):
             state.use_bundled()
             reset_selection()
             st.rerun()
@@ -61,19 +62,17 @@ with left:
 with right:
     with st.container(key="card-checks"):
         theme.card_title("What gets checked")
-        st.html(
-            """<div class="m-list">
-              <div class="m-row" style="grid-template-columns:1fr"><div><div class="w">Columns</div>
-                <div class="c">All 12 required columns are present and readable</div></div></div>
-              <div class="m-row" style="grid-template-columns:1fr"><div><div class="w">Ranges</div>
-                <div class="c">Rain, temperature, humidity and ward scores are physically plausible</div></div></div>
-              <div class="m-row" style="grid-template-columns:1fr"><div><div class="w">Continuity</div>
-                <div class="c">One row per ward per week, no duplicates or gaps, 9+ weeks of history</div></div></div>
-            </div>"""
-        )
+        checks = [
+            ("view_column", "Columns", "All 12 required columns are present and readable"),
+            ("rule", "Ranges", "Rain, temperature, humidity and ward scores are physically plausible"),
+            ("timeline", "Continuity", "One row per ward per week, no duplicates or gaps, 9+ weeks of history"),
+        ]
+        st.html('<div class="m-list">' + "".join(
+            f'<div class="m-row"><div class="n">{theme.icon(i)}</div><div><div class="w">{t}</div>'
+            f'<div class="c">{d}</div></div><div></div></div>' for i, t, d in checks) + "</div>")
 
-st.html('<div style="height:1.4rem"></div>')
-with st.expander("Column reference"):
+theme.gap()
+with st.expander("Column reference", icon=":material/table_view:"):
     schema = pd.DataFrame(
         [
             ("date", "Monday of the week, YYYY-MM-DD", "consecutive weeks per ward"),
@@ -85,4 +84,6 @@ with st.expander("Column reference"):
         ],
         columns=["Column", "Meaning", "Accepted values"],
     )
-    st.dataframe(schema, hide_index=True, use_container_width=True)
+    st.dataframe(schema, hide_index=True, width="stretch")
+
+theme.footer(meta)
