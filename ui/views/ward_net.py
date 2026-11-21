@@ -49,12 +49,12 @@ theme.stats([
 
 with st.container(key="card-net"):
     theme.card_title("Risk across wards",
-                     "Each tile is a ward, showing expected dengue cases that week. Hover a tile for its 80% range.",
+                     "Each tile is a ward, showing expected dengue cases that week. Hover for details, click to open its forecast.",
                      f"{len(fc)} wards")
     t_week, t_season = st.tabs(["This week", "Whole season"])
     with t_week:
         early_label = None if policy == "Standard" else f"Early alert ({policy.lower()} rule{caught})"
-        st.html(components.ward_net(fc, thr, early_label))
+        st.html(components.ward_net(fc, thr, early_label, link=state.link_params(issue_date, horizon, cities)))
 
     with t_season:
         dates = pd.DatetimeIndex(svc.issue_dates)
@@ -75,11 +75,17 @@ with st.container(key="card-net"):
             hovertemplate="%{y}<br>Week of %{x|%d %b}<br>%{customdata:.1f} expected cases<extra></extra>"))
         fig.add_vrect(x0=target - pd.Timedelta(days=3.5), x1=target + pd.Timedelta(days=3.5),
                       line=dict(color=theme.INK, width=2), fillcolor="rgba(0,0,0,0)")
-        fig.update_layout(margin=dict(l=0, r=0, t=8, b=0),
-                          yaxis=dict(showticklabels=False, showgrid=False), xaxis=dict(tickformat="%b"))
+        # Divider lines between city corporations, so the 60 rows read as 5 groups.
+        corps = [corporation_of(w) for w in z.index]
+        for i in range(1, len(corps)):
+            if corps[i] != corps[i - 1]:
+                fig.add_hline(y=i - 0.5, line=dict(color=theme.BASE, width=5))
+        fig.update_layout(margin=dict(l=0, r=0, t=8, b=0), xaxis=dict(tickformat="%b", side="top"),
+                          yaxis=dict(showgrid=False, tickfont=dict(size=10, color=theme.INK_2), ticksuffix="  "))
         st.html(f'<p class="m-note">{horizon}-week forecasts for every week of the {target.year} season, one row per ward '
-                f'with Dhaka North at the top. The outlined column is the week shown in "This week".</p>')
-        theme.plot(fig, max(420, 10 * len(z) + 60))
+                f'grouped by city corporation. The outlined column is the week shown in "This week". '
+                'Hover any cell for its expected cases.</p>')
+        theme.plot(fig, max(420, 15 * len(z) + 60))
 
 theme.gap()
 

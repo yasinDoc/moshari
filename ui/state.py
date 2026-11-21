@@ -95,6 +95,7 @@ def settings() -> tuple[pd.Timestamp, int, tuple[str, ...]]:
     """Render the forecast settings panel (inside the sidebar) and return its values."""
     svc = service()
     dates = svc.issue_dates
+    _apply_query_params(svc)
     if st.session_state.get("issue_date") not in dates:
         st.session_state["issue_date"] = svc.default_issue_date()
     if st.session_state.get("horizon") not in svc.bundle.horizons:
@@ -121,9 +122,8 @@ def settings() -> tuple[pd.Timestamp, int, tuple[str, ...]]:
             "Alert sensitivity",
             options=list(ALERT_POLICIES),
             key="alert_policy",
-            format_func=lambda p: {"Standard": "Standard: expected reaches High",
-                                   "Balanced": "Balanced: midpoint reaches High",
-                                   "Cautious": "Cautious: upper range reaches High"}[p],
+            format_func=lambda p: {"Standard": "Standard (expected)", "Balanced": "Balanced (midpoint)",
+                                   "Cautious": "Cautious (upper range)"}[p],
         )
         cities = sorted(svc.wards[C.CITY_COL].unique())
         chosen = st.multiselect("City corporations", cities, key="cities", placeholder="All five")
@@ -148,3 +148,37 @@ def live_service(fetched_at: float, through: pd.Timestamp) -> ForecastService:
     daily, _ = live_weather(st.session_state.get("live_refresh", 0))
     weekly = live.to_weekly(daily)
     return ForecastService(live.live_frame(service().raw, weekly, through), get_bundle())
+
+
+# --------------------------------------------------------------------------- deep links
+def link_params(issue_date, horizon: int, cities: tuple[str, ...]) -> dict:
+    """Query parameters that reproduce the current settings (used by clickable ward tiles)."""
+    params = {"issue": pd.Timestamp(issue_date).strftime("%Y-%m-%d"), "h": int(horizon), "policy": policy()}
+    if cities:
+        params["cities"] = ",".join(cities)
+    return params
+
+
+def _apply_query_params(svc: ForecastService) -> None:
+    """Restore settings from a deep link once per session, then clear the URL."""
+    qp = st.query_params
+    if not qp or st.session_state.get("_qp_applied"):
+        return
+    st.session_state["_qp_applied"] = True
+    try:
+        if "issue" in qp:
+            d = pd.Timestamp(qp["issue"])
+            if d in set(svc.issue_dates):
+                st.session_state["issue_date"] = d
+        if "h" in qp and int(qp["h"]) in svc.bundle.horizons:
+            st.session_state["horizon"] = int(qp["h"])
+        if qp.get("policy") in ALERT_POLICIES:
+            st.session_state["alert_policy"] = qp["policy"]
+        if "cities" in qp:
+            known = set(svc.wards[C.CITY_COL])
+            st.session_state["cities"] = [c for c in qp["cities"].split(",") if c in known]
+        if qp.get("ward") in set(svc.wards.index):
+            st.session_state["ward"] = qp["ward"]
+    except (ValueError, TypeError):
+        pass  # a malformed link falls back to defaults
+    st.query_params.clear()

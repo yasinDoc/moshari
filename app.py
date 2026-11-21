@@ -14,6 +14,12 @@ for p in (ROOT / "src", ROOT):
     if str(p) not in sys.path:
         sys.path.insert(0, str(p))
 
+# Faster cold start: the dashboard only runs inference, but importing LightGBM also
+# imports scikit-learn (~4 s) for wrappers Moshari never uses here. Marking it
+# unavailable in this process makes LightGBM skip it. Training and tests run in
+# their own processes and are unaffected.
+sys.modules.setdefault("sklearn", None)
+
 import streamlit as st  # noqa: E402
 
 LOGO = ROOT / "assets" / "logo.svg"

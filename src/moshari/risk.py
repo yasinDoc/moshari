@@ -17,36 +17,41 @@ class Tier:
     soft: str
     action: str
     detail: str
+    ink: str = ""   # tier colour safe for text on the light background (WCAG AA)
 
 
 TIERS: dict[str, Tier] = {
     "Low": Tier(
         "Low",
-        "#3AA876",
-        "rgba(58,168,118,0.16)",
+        "#CDE8D6",
+        "rgba(205,232,214,0.55)",
         "Routine surveillance",
         "Keep weekly larval surveys and community clean-up messaging on schedule.",
+        "#256E4A",
     ),
     "Medium": Tier(
         "Medium",
-        "#E8B10E",
-        "rgba(232,177,14,0.18)",
+        "#F4CC55",
+        "rgba(244,204,85,0.25)",
         "Source reduction",
         "Clear drains and stagnant containers; schedule larviciding of known breeding sites.",
+        "#8A6100",
     ),
     "High": Tier(
         "High",
-        "#EA6B2D",
-        "rgba(234,107,45,0.16)",
+        "#C4531B",
+        "rgba(196,83,27,0.14)",
         "Targeted vector control",
         "Deploy larvicide and fogging teams this week; brief ward health workers; notify nearby hospitals.",
+        "#B04A17",
     ),
     "Critical": Tier(
         "Critical",
-        "#D63A47",
-        "rgba(214,58,71,0.16)",
+        "#8F1D30",
+        "rgba(143,29,48,0.14)",
         "Outbreak response",
         "Vector control within 48h, door-to-door source reduction, pre-position saline, beds and NS1 test kits.",
+        "#8F1D30",
     ),
 }
 
