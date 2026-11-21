@@ -1,4 +1,4 @@
-"""Cached resources and the shared sidebar controls.
+"""Cached resources and the shared forecast settings.
 
 Cost controls live here: the model is deserialised once per server process
 (``cache_resource``), features once per dataset fingerprint, and every
@@ -77,14 +77,16 @@ def backtest() -> pd.DataFrame:
     return pd.read_parquet(C.BACKTEST_PATH) if C.BACKTEST_PATH.exists() else pd.DataFrame()
 
 
-# --------------------------------------------------------------------------- #
-# Shared controls (rendered in the sidebar, read by every page)
-# --------------------------------------------------------------------------- #
 def fmt_week(d) -> str:
     return pd.Timestamp(d).strftime("%d %b %Y")
 
 
-def controls() -> tuple[pd.Timestamp, int, tuple[str, ...]]:
+def fmt_short(d) -> str:
+    return pd.Timestamp(d).strftime("%d %b")
+
+
+def settings() -> tuple[pd.Timestamp, int, tuple[str, ...]]:
+    """Render the forecast settings panel (inside the sidebar) and return its values."""
     svc = service()
     dates = svc.issue_dates
     if st.session_state.get("issue_date") not in dates:
@@ -92,21 +94,22 @@ def controls() -> tuple[pd.Timestamp, int, tuple[str, ...]]:
     if st.session_state.get("horizon") not in svc.bundle.horizons:
         st.session_state["horizon"] = 3
 
-    with st.sidebar:
+    with st.container(key="settings"):
         st.select_slider(
-            "Forecast issued in the week of",
+            "Forecast issued",
             options=dates,
             key="issue_date",
             format_func=fmt_week,
             help="Moshari only uses data up to this week, as a health officer would on that Monday.",
         )
         st.segmented_control(
-            "Look ahead (weeks)",
+            "Weeks ahead",
             options=svc.bundle.horizons,
             key="horizon",
-            help="The 2-to-4-week lag between rain and hospital cases is the early-warning window.",
+            width="stretch",
+            help="Rain takes 2 to 4 weeks to turn into cases, so this is the early-warning window.",
         )
         cities = sorted(svc.wards[C.CITY_COL].unique())
-        chosen = st.multiselect("City corporations", cities, key="cities", placeholder="All cities")
+        chosen = st.multiselect("City corporations", cities, key="cities", placeholder="All five")
     horizon = st.session_state.get("horizon") or 3
     return pd.Timestamp(st.session_state["issue_date"]), int(horizon), tuple(chosen)

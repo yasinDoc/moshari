@@ -26,32 +26,32 @@ st.set_page_config(
 )
 
 from ui import theme  # noqa: E402
-from ui.state import controls  # noqa: E402
+from ui.state import settings  # noqa: E402
 
 theme.inject_css()
+
+PAGES = [
+    st.Page("ui/views/ward_net.py", title="Ward overview", icon=":material/grid_view:", default=True),
+    st.Page("ui/views/ward_forecast.py", title="Ward forecast", icon=":material/monitoring:"),
+    st.Page("ui/views/model_check.py", title="Model accuracy", icon=":material/verified:"),
+    st.Page("ui/views/data_source.py", title="Data", icon=":material/database:"),
+]
+nav = st.navigation(PAGES, position="hidden")
 
 logo_b64 = base64.b64encode(LOGO.read_bytes()).decode()
 with st.sidebar:
     st.html(
-        f"""
-        <div class="m-brand">
-          <img src="data:image/svg+xml;base64,{logo_b64}" alt="">
-          <div><div class="name">Moshari</div><div class="bn">মশারি</div></div>
-        </div>
-        <p class="m-brand-tag">Dengue early warning for every ward in Dhaka, Chattogram, Gazipur and Narayanganj.</p>
-        """
+        f"""<div class="m-brand">
+              <div class="mark"><img src="data:image/svg+xml;base64,{logo_b64}" alt=""></div>
+              <div><div class="name">Moshari</div><div class="bn">মশারি</div></div>
+            </div>"""
     )
-
-pages = [
-    st.Page("ui/views/ward_net.py", title="Ward risk net", default=True),
-    st.Page("ui/views/ward_forecast.py", title="Ward forecast"),
-    st.Page("ui/views/model_check.py", title="How accurate is it?"),
-    st.Page("ui/views/data_source.py", title="Data source"),
-]
-nav = st.navigation(pages, position="top")
-st.session_state["_controls"] = controls()
-
-with st.sidebar:
-    st.caption("Forecasts run locally from a saved model. No external API calls.")
+    for page in PAGES:
+        key = "nav-current" if page.title == nav.title else f"nav-{page.url_path or 'home'}"
+        with st.container(key=key):
+            st.page_link(page, label=page.title, icon=page.icon)
+    st.html('<div class="m-side-label">Forecast settings</div>')
+    st.session_state["_controls"] = settings()
+    st.html('<p class="m-foot">Runs locally from a saved model.<br>No external API calls.</p>')
 
 nav.run()

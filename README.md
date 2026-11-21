@@ -8,7 +8,7 @@
 
 *Moshari* is Bangla for mosquito net. A net protects one family. Moshari helps protect whole wards by forecasting dengue cases **2 to 4 weeks ahead** from weather. That gives city corporations time to send larvicide and fogging teams *before* hospital admissions climb.
 
-![Ward risk net: all 60 wards as cells of a net, coloured by forecast risk](docs/img/ward-net.png)
+![Ward overview: all 60 wards as tiles in a net, coloured by forecast risk](docs/img/ward-net.png)
 
 ## Run it locally
 
@@ -49,10 +49,10 @@ docker build -t moshari . && docker run -p 8501:8501 moshari
 
 | Page | What a health officer gets |
 |---|---|
-| **Ward risk net** | Every ward's risk for the chosen week as cells of a net, grouped by city corporation. A plain-language summary of where to start, a ranked dispatch list, and a season heatmap showing which wards turned first. |
+| **Ward overview** | Every ward's risk for the chosen week as tiles in a net, grouped by city corporation, plus a whole-season view. Headline numbers, the six wards to send teams to first, and risk by city. |
 | **Ward forecast** | One ward's 2-, 3- and 4-week outlook with an 80% range and the recommended response. A chart that lines up rain with later cases. The drivers behind the forecast, and what-if sliders for rain, temperature and humidity that re-run the model live. |
-| **How accurate is it?** | Hold-out results for 2024–25 against three simple baselines, a tier confusion matrix, a replay of both seasons, and the evidence for the 3-week breeding lag. |
-| **Data source** | Upload a newer weekly CSV. It is validated, then every page forecasts from it. |
+| **Model accuracy** | Hold-out results for 2024–25 against three simple baselines, a tier confusion matrix, a replay of both seasons, and the evidence for the 3-week breeding lag. |
+| **Data** | Upload a newer weekly CSV. It is validated, then every page forecasts from it. |
 
 ![Ward forecast: outlook, rain-to-cases chart and drivers](docs/img/ward-forecast.png)
 
