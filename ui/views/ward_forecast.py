@@ -60,7 +60,7 @@ with c1:
         </div>"""
     )
 with c2:
-    st.markdown("##### The next four weeks")
+    st.markdown("##### Two, three and four weeks ahead")
     cols = st.columns(len(outlook))
     for col, (_, r) in zip(cols, outlook.iterrows()):
         t = TIERS[r["tier"]]
@@ -109,7 +109,8 @@ fig.add_annotation(x=issue_date, y=1, yref="paper", text="Forecast issued", show
                    xanchor="right", yanchor="bottom", font=dict(size=11, color=theme.SLATE))
 fig.update_yaxes(title_text="Cases per week", secondary_y=False, rangemode="tozero")
 fig.update_yaxes(title_text="Rainfall (mm)", secondary_y=True, showgrid=False, rangemode="tozero")
-fig.update_layout(height=400, hovermode="x unified", bargap=0.25, margin=dict(t=50))
+fig.update_layout(height=420, hovermode="x unified", bargap=0.25, margin=dict(t=30, b=10),
+                  legend=dict(orientation="h", yanchor="top", y=-0.12, x=0))
 st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
 
 # --------------------------------------------------------------------------- drivers
@@ -142,11 +143,15 @@ with d2:
     top = g.iloc[::-1]
     up = top[top["log_effect"] > 0.05]
     down = top[top["log_effect"] < -0.05]
-    parts = ["Compared with an average ward-week in the training data:"]
+    parts = []
     if not up.empty:
-        parts.append("Pushing risk up: " + ", ".join(f"{r.group.lower()} (×{r.multiplier:.1f})" for r in up.itertuples()) + ".")
+        parts.append("Compared with an average ward-week, risk is pushed up by "
+                     + ", ".join(f"{r.group.lower()} (×{r.multiplier:.1f})" for r in up.itertuples()) + ".")
     if not down.empty:
-        parts.append("Holding it down: " + ", ".join(f"{r.group.lower()} (×{r.multiplier:.2f})" for r in down.itertuples()) + ".")
+        parts.append("Holding it down: "
+                     + ", ".join(f"{r.group.lower()} (×{r.multiplier:.2f})" for r in down.itertuples()) + ".")
+    if not parts:
+        parts.append("No single driver moves this forecast far from an average ward-week.")
     st.html(f'<p class="m-note" style="font-size:.98rem;color:{theme.INK}">{" ".join(parts)}</p>')
     with st.expander("Top individual signals"):
         show = feats.head(8)

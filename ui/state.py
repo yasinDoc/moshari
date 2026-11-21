@@ -101,10 +101,9 @@ def controls() -> tuple[pd.Timestamp, int, tuple[str, ...]]:
             help="Moshari only uses data up to this week, as a health officer would on that Monday.",
         )
         st.segmented_control(
-            "Look ahead",
+            "Look ahead (weeks)",
             options=svc.bundle.horizons,
             key="horizon",
-            format_func=lambda h: f"{h} weeks",
             help="The 2-to-4-week lag between rain and hospital cases is the early-warning window.",
         )
         cities = sorted(svc.wards[C.CITY_COL].unique())
