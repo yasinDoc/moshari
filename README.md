@@ -37,6 +37,12 @@ streamlit run app.py
 
 The dashboard opens at http://localhost:8501.
 
+## Tested on
+
+| Operating system | Python | Setup time |
+|---|---|---|
+| Windows 11 Home Single Language | 3.15.2 | 7 min 40 sec |
+
 Optional:
 
 ```bash
@@ -121,6 +127,7 @@ We disclose every AI tool and outside service used to build or run Moshari.
 | Tool | Used for |
 |---|---|
 | Claude Code (Anthropic, model Claude Opus 5.5) | Pair-programming the pipeline, model, dashboard, tests and documentation; design review of the visual identity |
+| GitHub Copilot (Copilot SDK in VS Code) | Updating the README test record and demo script |
 
 *Teammates: add any other assistant you used (ChatGPT, Copilot, Gemini…) to this table before submission.*
 
