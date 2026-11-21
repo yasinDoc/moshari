@@ -18,7 +18,7 @@ One uncut take: screen and voice, no slides, no edits. Rehearse until it fits in
 | Time | On screen | Say |
 |---|---|---|
 | 0:00 | **Overview**, top of page | "This is Moshari, Bangla for mosquito net. It forecasts dengue for each of 60 wards in Dhaka, Chattogram, Gazipur and Narayanganj, two to four weeks ahead, from weather." |
-| 0:15 | Point at the four stat tiles | "It's 2 June 2025, the start of the season. Looking three weeks ahead, 26 wards are expected to hit high risk, and on the cautious setting every ward is already on watch. Gazipur is the hardest-hit city." |
+| 0:15 | Point at the four stat tiles | "It's 2 June 2025, the start of the season. Looking three weeks ahead, 26 wards are expected to hit high risk, and the cautious setting puts 34 more on watch. Gazipur is the hardest-hit city." |
 | 0:28 | Point at the ward tiles, hover one tile | "Every tile is a ward, coloured by risk, showing expected cases. Hovering shows the 80% range. The red rings are early alerts: wards whose likely upper range already reaches High." |
 | 0:45 | Drag **Forecast issued** back to May, then return it to 2 June | "Everything is computed live. Moving the week re-runs the model, using only data available on that Monday." |
 | 0:58 | Scroll to **Send teams here first**, choose **CCC Ward 01** under *Open a ward*, click **View forecast** | "This list ranks wards by urgency, with the response for each. Let's open CCC Ward 01 in Chattogram." |

@@ -8,6 +8,22 @@
 
 *Moshari* is Bangla for mosquito net. A net protects one family. Moshari helps protect whole wards by forecasting dengue cases **2 to 4 weeks ahead** from weather. That gives city corporations time to send larvicide and fogging teams *before* hospital admissions climb.
 
+## Results at a glance
+
+Tested on 2024 and 2025, two seasons the model never saw during training (3-week forecasts, 6,300 ward-weeks):
+
+| | Result |
+|---|---|
+| Average miss | **1.03 cases** per ward per week |
+| Against the best simple rule | **17% lower error** |
+| Right risk tier | **83%** of ward-weeks |
+| 80% forecast range | covers **80%** of actual counts |
+| High-risk weeks caught (cautious alerts) | **98%** |
+| Alert out before the season's first high-risk week | **90%** of ward-seasons, against 35% for a plain threshold |
+| Setup time with uv | **56 s** from a cold start |
+
+**Demo video:** *link to be added*
+
 ![Ward overview: all 60 wards as tiles in a net, coloured by forecast risk](docs/img/ward-net.png)
 
 ## Run it locally

@@ -37,8 +37,8 @@ caught = f", alerted in time for {on_time:.0%} of season onsets in testing" if o
 by_city = fc.groupby(C.CITY_COL)["tier_idx"].apply(lambda s: (s >= 2).mean()).sort_values(ascending=False)
 crit_color = theme.TIER_COLORS["Critical"] if n_crit else theme.INK
 theme.stats([
-    ("notifications_active", "Wards on alert", f"{n_on}<small> / {len(fc)} wards</small>",
-     f"{n_high} expected high, {n_early} early alerts"),
+    ("warning", "Expected high risk", f"{n_high}<small> / {len(fc)} wards</small>",
+     (f"{n_early} more on watch ({policy.lower()} rule)" if n_early else "need vector control this week")),
     ("e911_emergency", "Critical", f"<span style='color:{crit_color}'>{n_crit}</span><small> wards</small>",
      f"{n_up} more could tip into critical"),
     ("groups", "Expected cases", f"{fc['expected_cases'].sum():,.0f}", f"across {len(fc)} wards that week"),
