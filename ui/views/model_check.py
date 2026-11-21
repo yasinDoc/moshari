@@ -1,4 +1,4 @@
-"""How accurate is it? Chronological hold-out validation, in plain view."""
+"""Model accuracy: chronological hold-out validation, in plain view."""
 
 from __future__ import annotations
 
@@ -15,140 +15,127 @@ issue_date, horizon, cities = st.session_state["_controls"]
 m = state.metrics()
 bt = state.backtest()
 if not m or bt.empty:
-    st.warning("No validation results found. Run `python scripts/train.py` to train and evaluate the model.")
+    st.warning("No validation results yet. Run `python scripts/train.py` to train and evaluate the model.")
     st.stop()
 
 hm = m["horizons"][str(horizon)]
-meta = m["metadata"]
-best_base = min(hm["baselines"], key=lambda k: hm["baselines"][k]["mae"])
 BASE_NAMES = {"persistence": "Same as this week", "seasonal_naive": "Same week last year",
-              "climatology": "Ward's seasonal average"}
+              "climatology": "Seasonal average"}
 
-st.html(f'<p class="m-kicker">Tested on 2024 and 2025, which the model never saw during training</p>')
-st.html(
-    f'<p class="m-lede">Moshari\'s {horizon}-week forecasts miss by <b>{hm["model"]["mae"]:.2f} cases</b> '
-    f'per ward per week on average, <b>{hm["mae_improvement_vs_best_baseline"]:.0%} closer</b> than the best '
-    f'simple rule, and put {hm["model"]["tier_accuracy"]:.0%} of ward-weeks in the right risk tier.</p>'
+theme.header(
+    "Model accuracy",
+    "Tested on 2024 and 2025, two seasons the model never saw while training",
+    [("Showing", f"{horizon}-week forecasts")],
 )
+theme.stats([
+    ("Average miss", f"{hm['model']['mae']:.2f}", "cases per ward per week (MAE)"),
+    ("Better than simple rules", f"{hm['mae_improvement_vs_best_baseline']:.0%}", "lower error than the best baseline"),
+    ("Right risk tier", f"{hm['model']['tier_accuracy']:.0%}", f"{hm['model']['tier_within_one']:.0%} within one tier"),
+    ("80% range hit rate", f"{hm['interval_coverage_80']:.0%}", "of actual counts fell inside the range"),
+])
 
-k1, k2, k3, k4 = st.columns(4)
-k1.metric("Mean absolute error", f"{hm['model']['mae']:.2f}", help="Average miss, in cases per ward per week.")
-k2.metric("Root mean squared error", f"{hm['model']['rmse']:.2f}", help="Penalises big misses more.")
-k3.metric("High-risk weeks caught", f"{hm['model']['alert_recall']:.0%}",
-          help="Of the ward-weeks that turned out High or Critical, the share Moshari flagged as High or Critical.")
-k4.metric("80% range coverage", f"{hm['interval_coverage_80']:.0%}",
-          help="Share of actual counts that fell inside the 80% range. Calibrated on 2023 with conformal prediction.")
+# --------------------------------------------------------------------------- replay
+with st.container(key="card-replay"):
+    theme.card_title("Replay of 2024 and 2025",
+                     f"What Moshari forecast {horizon} weeks ahead, against what was actually reported.")
+    b = bt[bt["horizon"] == horizon]
+    if cities:
+        b = b[b["city"].isin(cities)]
+    opts = ["All selected wards"] + sorted(b["ward_id"].unique())
+    c1, _ = st.columns([2, 3])
+    who = c1.selectbox("Show", opts, format_func=lambda w: w if w == opts[0] else ward_label(w), key="mc_who")
+    if who == opts[0]:
+        d = b.groupby("target_date")[["actual", "expected"]].sum().reset_index()
+        traces = []
+    else:
+        d = b[b["ward_id"] == who].sort_values("target_date")
+        traces = [
+            go.Scatter(x=d["target_date"], y=d["upper_80"], line=dict(width=0), showlegend=False, hoverinfo="skip"),
+            go.Scatter(x=d["target_date"], y=d["lower_80"], line=dict(width=0), fill="tonexty",
+                       fillcolor="rgba(17,117,109,0.15)", name="80% range", hoverinfo="skip"),
+        ]
+    traces += [
+        go.Scatter(x=d["target_date"], y=d["actual"], name="Reported", line=dict(color=theme.INK, width=2.2)),
+        go.Scatter(x=d["target_date"], y=d["expected"], name="Forecast", line=dict(color=theme.ACCENT, width=2.4, dash="dot")),
+    ]
+    fig = go.Figure(traces)
+    fig.update_layout(height=330, hovermode="x unified", margin=dict(l=4, r=4, t=30, b=4))
+    st.plotly_chart(fig, use_container_width=True, config=theme.PLOT_CONFIG, theme=None)
 
-# --------------------------------------------------------------------------- timeline split
-st.subheader("How the data was split")
-fig = go.Figure()
-spans = [("Train", "2016-01-04", C.TRAIN_END, theme.LAGOON),
-         ("Validate", C.TRAIN_END, C.VALID_END, theme.RAIN),
-         ("Test (hold-out)", C.VALID_END, "2025-12-29", theme.TIER_COLORS["High"])]
-for name, a, b, color in spans:
-    fig.add_shape(type="rect", x0=a, x1=b, y0=0, y1=1, fillcolor=color, opacity=0.85, line_width=0)
-    fig.add_annotation(x=pd.Timestamp(a) + (pd.Timestamp(b) - pd.Timestamp(a)) / 2, y=0.5, text=name,
-                       showarrow=False, font=dict(color="white", size=13))
-fig.update_layout(height=90, margin=dict(l=8, r=8, t=4, b=8), yaxis=dict(visible=False, range=[0, 1]),
-                  xaxis=dict(range=["2016-01-01", "2026-01-05"], showgrid=False, type="date"))
-st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False, "staticPlot": True})
-st.caption("Split by the week being forecast, never at random, so no future information leaks into training. "
-           "2023 picks the number of boosting rounds and calibrates the 80% range; the shipped model is then "
-           f"refit on 2016 to 2023. Model trained through {meta['trained_through']}.")
+st.html('<div style="height:1.4rem"></div>')
 
-# --------------------------------------------------------------------------- error vs baselines
-c1, c2 = st.columns(2, gap="large")
-with c1:
-    st.subheader("Error against simple rules")
-    rows = []
-    for h, v in m["horizons"].items():
-        rows.append({"h": f"{h} weeks", "who": "Moshari", "mae": v["model"]["mae"]})
-        for b, bv in v["baselines"].items():
-            rows.append({"h": f"{h} weeks", "who": BASE_NAMES[b], "mae": bv["mae"]})
-    df = pd.DataFrame(rows)
-    colors = {"Moshari": theme.LAGOON, "Same as this week": "#B9C6C0",
-              "Same week last year": "#9AABA4", "Ward's seasonal average": "#7C8F88"}
-    fig = go.Figure([go.Bar(x=d["h"], y=d["mae"], name=who, marker_color=colors[who],
-                            text=d["mae"].round(2), textposition="outside", cliponaxis=False)
-                     for who, d in df.groupby("who", sort=False)])
-    fig.update_layout(barmode="group", height=340, yaxis_title="Mean absolute error (cases)")
-    st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
+left, right = st.columns(2, gap="large")
+with left:
+    with st.container(key="card-baselines"):
+        theme.card_title("Against simple rules", "Average miss in cases per ward per week. Lower is better.")
+        rows = []
+        for h, v in m["horizons"].items():
+            rows.append({"h": f"{h} wk", "who": "Moshari", "mae": v["model"]["mae"]})
+            for k, bv in v["baselines"].items():
+                rows.append({"h": f"{h} wk", "who": BASE_NAMES[k], "mae": bv["mae"]})
+        df = pd.DataFrame(rows)
+        colors = {"Moshari": theme.ACCENT, "Same as this week": "#CFC6B4",
+                  "Same week last year": "#B9AF9B", "Seasonal average": "#9F957F"}
+        fig = go.Figure([go.Bar(x=g["h"], y=g["mae"], name=w, marker_color=colors[w], marker_line_width=0,
+                                hovertemplate=f"{w}: %{{y:.2f}}<extra></extra>")
+                         for w, g in df.groupby("who", sort=False)])
+        fig.update_layout(barmode="group", height=320, bargap=0.3, bargroupgap=0.08,
+                          legend=dict(y=-0.18, yanchor="top"), margin=dict(l=4, r=4, t=10, b=4))
+        st.plotly_chart(fig, use_container_width=True, config=theme.PLOT_CONFIG, theme=None)
 
-with c2:
-    st.subheader("Risk tiers: forecast against actual")
-    cm = pd.DataFrame(hm["confusion"]).reindex(index=C.TIER_NAMES, columns=C.TIER_NAMES).fillna(0)
-    # stored as {forecast: {actual: n}}
-    z = cm.T.to_numpy()
-    share = z / np.maximum(z.sum(axis=1, keepdims=True), 1)
-    fig = go.Figure(go.Heatmap(
-        z=share, x=list(C.TIER_NAMES), y=list(C.TIER_NAMES), customdata=z,
-        colorscale=[[0, "#FFFFFF"], [1, theme.LAGOON]], showscale=False, xgap=2, ygap=2,
-        text=[[f"{int(v)}" for v in row] for row in z], texttemplate="%{text}",
-        hovertemplate="Actual %{y}, forecast %{x}: %{customdata:.0f} ward-weeks<extra></extra>"))
-    fig.update_layout(height=340, xaxis_title="Forecast tier", yaxis_title="Actual tier",
-                      yaxis=dict(autorange="reversed"))
-    st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
+with right:
+    with st.container(key="card-lag"):
+        theme.card_title("Why lagged rain", "How closely cases follow rainfall from k weeks earlier, within each ward.")
+        lc = pd.DataFrame(m["lag_correlations"])
+        peak = lc.loc[lc["correlation"].idxmax()]
+        fig = go.Figure(go.Bar(
+            x=lc["lag_weeks"], y=lc["correlation"], marker_line_width=0,
+            marker_color=[theme.ACCENT if k == peak["lag_weeks"] else "#CFC6B4" for k in lc["lag_weeks"]],
+            hovertemplate="Rain %{x} weeks earlier: r = %{y:.2f}<extra></extra>"))
+        fig.add_annotation(x=peak["lag_weeks"], y=peak["correlation"], text=f"peak at {int(peak['lag_weeks'])} weeks",
+                           showarrow=False, yshift=14, font=dict(color=theme.ACCENT, size=12))
+        fig.update_layout(height=320, xaxis=dict(dtick=1, title="weeks between rain and cases"),
+                          yaxis=dict(range=[0, 0.9]), margin=dict(l=4, r=4, t=10, b=4))
+        st.plotly_chart(fig, use_container_width=True, config=theme.PLOT_CONFIG, theme=None)
 
-# --------------------------------------------------------------------------- backtest
-st.subheader("Replay of the hold-out years")
-b = bt[bt["horizon"] == horizon]
-if cities:
-    b = b[b["city"].isin(cities)]
-wards = ["All selected wards"] + sorted(b["ward_id"].unique())
-who = st.selectbox("Show", wards, format_func=lambda w: w if w == wards[0] else ward_label(w))
-if who == wards[0]:
-    agg = b.groupby("target_date")[["actual", "expected"]].sum().reset_index()
-    fig = go.Figure([
-        go.Scatter(x=agg["target_date"], y=agg["actual"], name="Reported", line=dict(color=theme.INK, width=2)),
-        go.Scatter(x=agg["target_date"], y=agg["expected"], name=f"Forecast {horizon} weeks earlier",
-                   line=dict(color=theme.LAGOON, width=2.4, dash="dot")),
-    ])
-else:
-    w = b[b["ward_id"] == who].sort_values("target_date")
-    fig = go.Figure([
-        go.Scatter(x=w["target_date"], y=w["upper_80"], line=dict(width=0), showlegend=False, hoverinfo="skip"),
-        go.Scatter(x=w["target_date"], y=w["lower_80"], line=dict(width=0), fill="tonexty",
-                   fillcolor="rgba(15,110,106,0.16)", name="80% range", hoverinfo="skip"),
-        go.Scatter(x=w["target_date"], y=w["actual"], name="Reported", line=dict(color=theme.INK, width=2)),
-        go.Scatter(x=w["target_date"], y=w["expected"], name=f"Forecast {horizon} weeks earlier",
-                   line=dict(color=theme.LAGOON, width=2.4, dash="dot")),
-    ])
-fig.update_layout(height=360, hovermode="x unified", yaxis_title="Cases per week")
-st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
+st.html('<div style="height:1.4rem"></div>')
 
-# --------------------------------------------------------------------------- evidence
-c1, c2 = st.columns(2, gap="large")
-with c1:
-    st.subheader("Evidence for the breeding clock")
-    lc = pd.DataFrame(m["lag_correlations"])
-    peak = lc.loc[lc["correlation"].idxmax()]
-    fig = go.Figure(go.Bar(
-        x=lc["lag_weeks"], y=lc["correlation"],
-        marker_color=[theme.LAGOON if k == peak["lag_weeks"] else "#B9C6C0" for k in lc["lag_weeks"]],
-        hovertemplate="Rain %{x} weeks earlier: r = %{y:.2f}<extra></extra>"))
-    fig.update_layout(height=300, xaxis_title="Weeks between rainfall and cases", yaxis_title="Correlation",
-                      xaxis=dict(dtick=1))
-    st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
-    st.caption(f"Within each ward, cases track rainfall from {int(peak['lag_weeks'])} weeks earlier most closely "
-               f"(r = {peak['correlation']:.2f}), not same-week rain. That's why every forecast is built on lagged rain.")
-with c2:
-    st.subheader("Signals the model leans on")
-    imp = pd.Series(m["feature_importance"][str(horizon)]).head(10)[::-1]
-    labels = m.get("feature_labels", {})
-    fig = go.Figure(go.Bar(x=imp.to_numpy(), y=[labels.get(f, f) for f in imp.index], orientation="h",
-                           marker_color=theme.LAGOON, hovertemplate="%{y}: %{x:.1%} of total gain<extra></extra>"))
-    fig.update_layout(height=300, xaxis=dict(tickformat=".0%", title="Share of total split gain"),
-                      yaxis=dict(showgrid=False))
-    st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
-
-with st.expander("All metrics by horizon"):
-    rows = []
-    for h, v in m["horizons"].items():
-        rows.append({
-            "Horizon": f"{h} weeks", "MAE": v["model"]["mae"], "RMSE": v["model"]["rmse"],
-            "Tier accuracy": v["model"]["tier_accuracy"], "Within one tier": v["model"]["tier_within_one"],
-            "Macro F1 (tiers)": v["model"]["tier_macro_f1"], "Alert recall": v["model"]["alert_recall"],
-            "Alert precision": v["model"]["alert_precision"], "80% coverage": v["interval_coverage_80"],
-            "Test ward-weeks": v["n_test"],
-        })
-    st.dataframe(pd.DataFrame(rows).round(3), hide_index=True, use_container_width=True)
+with st.container(key="card-details"):
+    theme.card_title("Details", "How the data was split, how tiers compare and which signals matter most.")
+    t1, t2, t3 = st.tabs(["Validation split", "Risk tiers", "Top signals"])
+    with t1:
+        st.html(
+            f"""<div class="m-steps">
+              <div class="m-step"><div class="h">Train</div><div class="c" style="font-size:1.25rem">2016 to 2022</div>
+                <div class="r">fit the models</div></div>
+              <div class="m-step"><div class="h">Validate</div><div class="c" style="font-size:1.25rem">2023</div>
+                <div class="r">pick boosting rounds, calibrate the 80% range</div></div>
+              <div class="m-step on"><div class="h">Test</div><div class="c" style="font-size:1.25rem">2024 and 2025</div>
+                <div class="r">scored once, never used for training</div></div>
+            </div>
+            <p class="m-sub" style="margin-top:1rem">Split by the week being forecast, never at random, so no future
+            information leaks into training. The shipped model is refit on 2016 to 2023.</p>"""
+        )
+    with t2:
+        cm = pd.DataFrame(hm["confusion"]).reindex(index=C.TIER_NAMES, columns=C.TIER_NAMES).fillna(0)
+        z = cm.T.to_numpy()
+        share = z / np.maximum(z.sum(axis=1, keepdims=True), 1)
+        fig = go.Figure(go.Heatmap(
+            z=share, x=list(C.TIER_NAMES), y=list(C.TIER_NAMES), customdata=z, showscale=False, xgap=4, ygap=4,
+            colorscale=[[0, theme.BASE_HI], [1, theme.ACCENT]],
+            text=[[f"{int(v):,}" for v in row] for row in z], texttemplate="%{text}",
+            hovertemplate="Actual %{y}, forecast %{x}: %{customdata:,.0f} ward-weeks<extra></extra>"))
+        fig.update_layout(height=320, xaxis=dict(title="forecast tier", side="bottom"),
+                          yaxis=dict(title="actual tier", autorange="reversed"), margin=dict(l=4, r=4, t=10, b=4))
+        st.plotly_chart(fig, use_container_width=True, config=theme.PLOT_CONFIG, theme=None)
+        st.caption(f"High-risk weeks caught: {hm['model']['alert_recall']:.0%}. "
+                   f"Of the weeks flagged high or above, {hm['model']['alert_precision']:.0%} really were.")
+    with t3:
+        imp = pd.Series(m["feature_importance"][str(horizon)]).head(8)[::-1]
+        labels = m.get("feature_labels", {})
+        fig = go.Figure(go.Bar(x=imp.to_numpy(), y=[labels.get(f, f) for f in imp.index], orientation="h",
+                               marker_color=theme.ACCENT, marker_line_width=0,
+                               hovertemplate="%{y}: %{x:.1%}<extra></extra>"))
+        fig.update_layout(height=320, xaxis=dict(tickformat=".0%", showgrid=True, gridcolor=theme.LINE),
+                          yaxis=dict(showgrid=False), margin=dict(l=4, r=4, t=10, b=4))
+        st.plotly_chart(fig, use_container_width=True, config=theme.PLOT_CONFIG, theme=None)
