@@ -22,7 +22,7 @@ st.set_page_config(
     page_title="Moshari dengue early warning",
     page_icon=str(LOGO),
     layout="wide",
-    initial_sidebar_state="expanded",
+    initial_sidebar_state="auto",
 )
 
 from ui import theme  # noqa: E402

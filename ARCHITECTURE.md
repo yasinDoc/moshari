@@ -18,10 +18,11 @@ flowchart LR
     G --> J["ForecastService<br/>(src/moshari/service.py)"]
     C --> J
     J --> K["Streamlit dashboard<br/>ward net, ward forecast,<br/>what-if, accuracy, upload"]
+    J --> L["FastAPI REST<br/>/forecast, /outlook,<br/>/explain, /scenario"]
     I --> K
 ```
 
-Code layout: `src/moshari/` holds the engine (`data`, `features`, `model`, `risk`, `evaluation`, `training`, `service`). `ui/` holds the dashboard only. The dashboard never touches LightGBM directly; it calls `ForecastService`, which a FastAPI layer can wrap unchanged in the final sprint.
+Code layout: `src/moshari/` holds the engine (`data`, `features`, `model`, `risk`, `evaluation`, `training`, `service`). `ui/` holds the dashboard only. Neither the dashboard nor the REST API (`api.py`) touches LightGBM directly; both call `ForecastService`, so a fix or a new model reaches both at once.
 
 ## The breeding clock, as features
 
@@ -75,6 +76,7 @@ The dashboard runs replays inside 2024–25 using this same model, so every fore
 | Process-wide model cache | `st.cache_resource` | The model and feature table load once per server, shared across users. |
 | Input-keyed result cache | `st.cache_data` on (data fingerprint, week, horizon, cities) | Repeated views are served from memory. A new upload changes the fingerprint and invalidates only its own entries. |
 | Vectorised inference | `ForecastService` | All 60 wards in about 0.1 s; a 30-week by 60-ward season heatmap in about 0.3 s. |
+| API response cache | `lru_cache` in `api.py` | A dashboard or SMS gateway polling `/forecast` repeatedly triggers one model call per distinct query. |
 | One-shot data fetch | `scripts/fetch_data.py` | The dataset is committed. Refreshing it is one validated HTTP GET with no key. |
 | Validation before compute | `data.validate` | Bad uploads are rejected before any feature or model work runs. |
 

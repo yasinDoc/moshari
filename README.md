@@ -41,7 +41,7 @@ Optional:
 
 ```bash
 python scripts/train.py            # retrain and re-evaluate (about 1 minute on a laptop CPU)
-pip install -r requirements-dev.txt && pytest   # 17 tests
+pip install -r requirements-dev.txt && pytest   # 21 tests
 docker build -t moshari . && docker run -p 8501:8501 moshari
 ```
 
@@ -55,6 +55,23 @@ docker build -t moshari . && docker run -p 8501:8501 moshari
 | **Data source** | Upload a newer weekly CSV. It is validated, then every page forecasts from it. |
 
 ![Ward forecast: outlook, rain-to-cases chart and drivers](docs/img/ward-forecast.png)
+
+## REST API
+
+The same forecasting service is available over HTTP for SMS alerts, hospital systems or a city GIS:
+
+```bash
+pip install -r requirements-api.txt
+uvicorn moshari.api:app --app-dir src --port 8000   # interactive docs at http://localhost:8000/docs
+```
+
+| Endpoint | Returns |
+|---|---|
+| `GET /forecast?issue_date=2025-06-02&horizon=3&min_tier=High&city=Gazipur` | Ranked ward forecasts with 80% range, tier and response |
+| `GET /wards/{ward_id}/outlook` | 2-, 3- and 4-week outlook for one ward |
+| `GET /wards/{ward_id}/explain` | Driver multipliers behind a forecast |
+| `POST /scenario` | What-if forecast with adjusted rain, temperature or humidity |
+| `GET /health`, `GET /wards` | Model version, thresholds, ward profiles |
 
 ## How it works
 
@@ -81,7 +98,8 @@ moshari/
 │   ├── risk.py             # tiers + response playbook
 │   ├── evaluation.py       # metrics + baselines
 │   ├── training.py         # chronological training pipeline
-│   └── service.py          # ForecastService used by the UI
+│   ├── service.py          # ForecastService used by the UI and API
+│   └── api.py              # FastAPI REST layer
 ├── scripts/                # train.py, fetch_data.py
 ├── models/                 # serialized model bundle
 ├── artifacts/              # metrics.json, backtest.parquet
