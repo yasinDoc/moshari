@@ -102,6 +102,6 @@ def corporation_of(ward_id: str) -> str:
 
 
 def ward_label(ward_id: str) -> str:
-    """'DNCC_Ward_07' -> 'DNCC · Ward 07'."""
+    """'DNCC_Ward_07' -> 'DNCC Ward 07'."""
     corp, _, rest = ward_id.partition("_")
-    return f"{corp} · {rest.replace('_', ' ')}" if rest else ward_id
+    return f"{corp} {rest.replace('_', ' ')}" if rest else ward_id
