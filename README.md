@@ -60,6 +60,7 @@ The dashboard opens at http://localhost:8501.
 | Windows 10 Pro | 3.14.0 | uv, cold, no cache | 56 s |
 | Windows 10 Pro | 3.14.0 | pip, cold, no cache | 6 min 11 s |
 | Windows 11 Home Single Language | 3.15.2 | pip | 7 min 40 s |
+| Windows 11 Pro 64-bit, Intel Celeron N4020 | 3.15.2 | pip | ran successfully |
 
 Optional:
 
@@ -148,9 +149,7 @@ We disclose every AI tool and outside service used to build or run Moshari.
 | Tool | Used for |
 |---|---|
 | Claude Code (Anthropic, model Claude Opus 5.5) | Pair-programming the pipeline, model, dashboard, tests and documentation; design review of the visual identity |
-| GitHub Copilot (Copilot SDK in VS Code) | Updating the README test record and demo script |
-
-*Teammates: add any other assistant you used (ChatGPT, Copilot, Gemini…) to this table before submission.*
+| GitHub Copilot (Microsoft, Copilot SDK in VS Code) | Code inspection and implementation support, test and environment validation, and documentation updates |
 
 **External APIs and services**
 
@@ -161,6 +160,12 @@ We disclose every AI tool and outside service used to build or run Moshari.
 | Google Fonts | When the dashboard loads in a browser | Manrope, Hind Siliguri; falls back to system fonts offline |
 
 All forecasting runs locally and no LLM is used. The only runtime API is Open-Meteo on the Live outlook page: at most one request every 6 hours.
+
+## Roadmap for the final round
+
+- Connect live dengue case reports, so the Live outlook no longer estimates recent case history from seasonal averages.
+- Add SMS alerts through the REST API for ward-level High and Critical forecasts.
+- Replace the net-style ward display with a ward map using real ward boundaries and coordinates.
 
 ## License
 

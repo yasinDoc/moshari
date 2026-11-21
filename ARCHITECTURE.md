@@ -1,6 +1,6 @@
 # Moshari architecture
 
-Moshari forecasts dengue cases for each of 60 city wards 2, 3 and 4 weeks ahead. It turns those forecasts into Low, Medium, High or Critical risk with a response for each tier. Everything runs locally from a saved model, so there are no API calls at forecast time.
+Moshari forecasts dengue cases for each of 60 city wards 2, 3 and 4 weeks ahead. It turns those forecasts into Low, Medium, High or Critical risk with a response for each tier. Forecasting runs locally from a saved model. The only runtime API call is one cached Open-Meteo request for the Live outlook page.
 
 ## Data flow
 
@@ -97,3 +97,11 @@ Missing an outbreak costs far more than an extra larviciding visit, so Cautious 
 | Validation before compute | `data.validate` | Bad uploads are rejected before any feature or model work runs. |
 
 Live weather already follows this pattern (see `live.py`). If the final sprint adds an LLM summary, the same applies: fetch once per ward per day into a disk cache keyed by date, batch all wards into a single request, and cap LLM output tokens, with the cached template text as the fallback.
+
+## Limitations
+
+- The source data is weekly, so forecasts and what-if results are updated at a weekly cadence rather than continuously.
+- The data has no ward coordinates or real geographic boundaries. The dashboard therefore uses a schematic ward-net view, not a real map.
+- Critical is rare in the historical forecasts because it is a high-tail tier; it may not appear in every week or horizon.
+- Live mode uses real weather but no live case reports yet, so each ward's recent case history is estimated from its seasonal average.
+- Live weather is one point per city corporation, so all wards in a city share the same rainfall.
