@@ -26,7 +26,9 @@ Tested on 2024 and 2025, two seasons the model never saw during training (3-week
 
 **Try it live:** https://moshari-sa5dxzxydg98ej4umhvbst.streamlit.app/ (free hosting sleeps when idle; the first visit can take about 30 seconds to wake)
 
-**Demo video:** *link to be added*
+**Demo video (3 min):** https://youtu.be/tghizcy3_V8
+
+[![Watch the Moshari demo on YouTube](https://img.youtube.com/vi/tghizcy3_V8/hqdefault.jpg)](https://youtu.be/tghizcy3_V8)
 
 ![Ward overview: all 60 wards as tiles in a net, coloured by forecast risk](docs/img/ward-net.png)
 
