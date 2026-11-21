@@ -24,6 +24,8 @@ Tested on 2024 and 2025, two seasons the model never saw during training (3-week
 | Alert out before the season's first high-risk week | **90%** of ward-seasons, against 35% for a plain threshold |
 | Setup time with uv | **56 s** from a cold start |
 
+**Try it live:** https://moshari-sa5dxzxydg98ej4umhvbst.streamlit.app/ (free hosting sleeps when idle; the first visit can take about 30 seconds to wake)
+
 **Demo video:** *link to be added*
 
 ![Ward overview: all 60 wards as tiles in a net, coloured by forecast risk](docs/img/ward-net.png)
