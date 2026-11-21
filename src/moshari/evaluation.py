@@ -35,6 +35,25 @@ def tier_metrics(y_true, y_pred, thresholds: list[float]) -> dict[str, float]:
     }
 
 
+def alert_policy_metrics(y_true, expected, upper, thresholds: list[float]) -> dict[str, dict[str, float]]:
+    """Recall / precision of "High or above" alerts under each alert policy."""
+    from .risk import ALERT_POLICIES, alert_score
+
+    actual = np.asarray(y_true, dtype=float) >= thresholds[1]
+    out = {}
+    for name in ALERT_POLICIES:
+        flagged = alert_score(expected, upper, name) >= thresholds[1]
+        tp = int((flagged & actual).sum())
+        out[name] = {
+            "recall": float(tp / max(int(actual.sum()), 1)),
+            "precision": float(tp / max(int(flagged.sum()), 1)),
+            "flag_rate": float(flagged.mean()),
+            "missed": int((actual & ~flagged).sum()),
+            "false_alarms": int((flagged & ~actual).sum()),
+        }
+    return out
+
+
 def interval_coverage(y_true, lo, hi) -> float:
     y = np.asarray(y_true, dtype=float)
     return float(((y >= np.asarray(lo)) & (y <= np.asarray(hi))).mean())

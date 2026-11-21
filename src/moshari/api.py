@@ -24,7 +24,7 @@ from . import __version__
 from . import config as C
 from .data import load_dataset
 from .model import ForecastBundle
-from .risk import TIERS
+from .risk import ALERT_POLICIES, DEFAULT_ALERT_POLICY, TIERS
 from .service import ForecastService, Scenario
 
 app = FastAPI(
@@ -52,6 +52,7 @@ class WardForecast(BaseModel):
     tier: str
     upside_tier: str
     response: str
+    alert: bool = Field(False, description="On the watch list under the chosen alert policy")
     actual_cases: Optional[float] = Field(None, description="Reported cases that week, when the data has it")
 
 
@@ -106,15 +107,16 @@ def _num(v) -> Optional[float]:
 
 
 @lru_cache(maxsize=512)
-def _forecast_all(issue: pd.Timestamp, horizon: int, city: Optional[str]) -> list[WardForecast]:
-    fc = service().forecast_all(issue, horizon, [city] if city else None)
+def _forecast_all(issue: pd.Timestamp, horizon: int, city: Optional[str],
+                  policy: str = DEFAULT_ALERT_POLICY) -> list[WardForecast]:
+    fc = service().forecast_all(issue, horizon, [city] if city else None, policy)
     return [
         WardForecast(
             ward_id=r[C.WARD_COL], city=r[C.CITY_COL], issue_date=issue.date(),
             target_date=pd.Timestamp(r["target_date"]).date(), horizon_weeks=horizon,
             expected_cases=_num(r["expected_cases"]), lower_80=_num(r["lower_80"]), upper_80=_num(r["upper_80"]),
             tier=r["tier"], upside_tier=r["upside_tier"], response=TIERS[r["tier"]].action,
-            actual_cases=_num(r["actual"]),
+            alert=bool(r["alert"]), actual_cases=_num(r["actual"]),
         )
         for _, r in fc.iterrows()
     ]
@@ -149,10 +151,16 @@ def forecast(
     horizon: int = Query(3, description="Weeks ahead: 2, 3 or 4"),
     city: Optional[str] = None,
     min_tier: str = Query("Low", description="Only return wards at or above this tier"),
+    alert_policy: str = Query(DEFAULT_ALERT_POLICY, description="Standard, Balanced or Cautious"),
+    alerts_only: bool = Query(False, description="Only return wards on alert"),
 ) -> list[WardForecast]:
     if min_tier not in C.TIER_NAMES:
         raise HTTPException(422, f"min_tier must be one of {list(C.TIER_NAMES)}")
-    rows = _forecast_all(_issue(issue_date), _horizon(horizon), city)
+    if alert_policy not in ALERT_POLICIES:
+        raise HTTPException(422, f"alert_policy must be one of {list(ALERT_POLICIES)}")
+    rows = _forecast_all(_issue(issue_date), _horizon(horizon), city, alert_policy)
+    if alerts_only:
+        rows = [r for r in rows if r.alert]
     floor = C.TIER_NAMES.index(min_tier)
     return [r for r in rows if C.TIER_NAMES.index(r.tier) >= floor]
 

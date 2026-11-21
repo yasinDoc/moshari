@@ -10,7 +10,7 @@ from plotly.subplots import make_subplots
 
 from moshari import config as C
 from moshari.data import ward_label
-from moshari.risk import TIERS
+from moshari.risk import TIERS, apply_alert_policy
 from moshari.service import Scenario
 from ui import state, theme
 
@@ -44,7 +44,8 @@ with st.container(key="card-ward"):
     )
 theme.gap()
 
-outlook = svc.ward_outlook(ward, issue_date)
+policy = state.policy()
+outlook = apply_alert_policy(svc.ward_outlook(ward, issue_date), svc.bundle.tier_thresholds, policy)
 main = outlook[outlook["horizon"] == horizon].iloc[0]
 tier = TIERS[main["tier"]]
 groups, feats, _ = svc.explain(ward, issue_date, horizon)
@@ -54,6 +55,10 @@ with left:
     with st.container(key="card-hero"):
         upside = (f" It could reach {theme.badge(main['upside_tier'])} at the upper end."
                   if main["upside_tier"] != main["tier"] else "")
+        early = ""
+        if main["alert"] and main["tier_idx"] < 2:
+            early = (f'<p class="m-note" style="margin-top:8px;color:{theme.TIER_COLORS["Critical"]};font-weight:700">'
+                     f'On early alert: the upper end of the range reaches High ({policy.lower()} rule).</p>')
         replay = ("" if np.isnan(main["actual"]) else
                   f'<p class="m-note" style="margin-top:8px">Replay check: {main["actual"]:.0f} cases were reported that week.</p>')
         st.html(
@@ -61,7 +66,7 @@ with left:
                   <div class="k">Week of {state.fmt_week(main['target_date'])}</div>
                   <div class="tier" style="color:{tier.color}">{tier.name} risk</div>
                   <div class="num"><b>{main['expected_cases']:.1f}</b> expected cases, likely between
-                    {main['lower_80']:.1f} and {main['upper_80']:.1f}.{upside}</div>{replay}
+                    {main['lower_80']:.1f} and {main['upper_80']:.1f}.{upside}</div>{early}{replay}
                   <div class="m-act"><div class="h">{theme.icon('task_alt')}{tier.action}</div>
                     <div class="b">{tier.detail}</div></div>
                 </div>"""

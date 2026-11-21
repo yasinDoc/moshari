@@ -24,6 +24,7 @@ import pandas as pd
 from . import config as C
 from .data import file_fingerprint, load_dataset
 from .evaluation import (
+    alert_policy_metrics,
     climatology,
     interval_coverage,
     regression_metrics,
@@ -113,6 +114,7 @@ def run_training(production: bool = False, log=print) -> dict[str, Any]:
             "interval_offset": offsets[h],
             "interval_mean_width": float(np.mean(hi - lo)),
             "confusion": tier_confusion(y_te, pred, thresholds).to_dict(),
+            "alert_policies": alert_policy_metrics(y_te, pred, hi, thresholds),
         }
         best_base = min(v["mae"] for v in hm["baselines"].values())
         hm["mae_improvement_vs_best_baseline"] = float(1 - hm["model"]["mae"] / best_base)

@@ -18,6 +18,7 @@ import streamlit as st
 from moshari import config as C
 from moshari.data import file_fingerprint, load_dataset
 from moshari.model import ForecastBundle
+from moshari.risk import ALERT_POLICIES, DEFAULT_ALERT_POLICY
 from moshari.service import ForecastService
 
 BUNDLED = "bundled"
@@ -58,8 +59,13 @@ def data_name() -> str:
 
 
 @st.cache_data(show_spinner=False, max_entries=256)
-def forecast_all(key: str, issue_date: pd.Timestamp, horizon: int, cities: tuple[str, ...]) -> pd.DataFrame:
-    return service().forecast_all(issue_date, horizon, list(cities) or None)
+def forecast_all(key: str, issue_date: pd.Timestamp, horizon: int, cities: tuple[str, ...],
+                 policy: str = DEFAULT_ALERT_POLICY) -> pd.DataFrame:
+    return service().forecast_all(issue_date, horizon, list(cities) or None, policy)
+
+
+def policy() -> str:
+    return st.session_state.get("alert_policy") or DEFAULT_ALERT_POLICY
 
 
 @st.cache_data(show_spinner=False, max_entries=64)
@@ -93,6 +99,8 @@ def settings() -> tuple[pd.Timestamp, int, tuple[str, ...]]:
         st.session_state["issue_date"] = svc.default_issue_date()
     if st.session_state.get("horizon") not in svc.bundle.horizons:
         st.session_state["horizon"] = 3
+    if st.session_state.get("alert_policy") not in ALERT_POLICIES:
+        st.session_state["alert_policy"] = DEFAULT_ALERT_POLICY
 
     with st.container(key="settings"):
         st.select_slider(
@@ -108,6 +116,12 @@ def settings() -> tuple[pd.Timestamp, int, tuple[str, ...]]:
             key="horizon",
             width="stretch",
             help="Rain takes 2 to 4 weeks to turn into cases, so this is the early-warning window.",
+        )
+        st.segmented_control(
+            "Alert sensitivity",
+            options=list(ALERT_POLICIES),
+            key="alert_policy",
+            width="stretch",
         )
         cities = sorted(svc.wards[C.CITY_COL].unique())
         chosen = st.multiselect("City corporations", cities, key="cities", placeholder="All five")

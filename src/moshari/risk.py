@@ -71,3 +71,31 @@ def assign_tier(values, thresholds: list[float]) -> np.ndarray:
 
 def tier_name(idx: int) -> str:
     return C.TIER_NAMES[int(idx)]
+
+
+# --------------------------------------------------------------------------- alert policies
+# The risk *tier* always describes the best estimate (expected cases). Whether a
+# ward is put *on alert* is a separate decision with a recall/precision trade-off:
+# missing an outbreak costs far more than one extra larviciding visit, so the
+# default leans cautious. Weights blend expected cases with the upper 80% bound.
+ALERT_POLICIES: dict[str, dict] = {
+    "Standard": {"weight": 0.0, "help": "Alert when expected cases reach High."},
+    "Balanced": {"weight": 0.5, "help": "Alert when the midpoint of expected and upper range reaches High."},
+    "Cautious": {"weight": 1.0, "help": "Alert when the upper end of the 80% range reaches High."},
+}
+DEFAULT_ALERT_POLICY = "Cautious"
+
+
+def alert_score(expected, upper, policy: str = DEFAULT_ALERT_POLICY) -> np.ndarray:
+    w = ALERT_POLICIES[policy]["weight"]
+    return (1 - w) * np.asarray(expected, dtype=float) + w * np.asarray(upper, dtype=float)
+
+
+def apply_alert_policy(df: pd.DataFrame, thresholds: list[float], policy: str = DEFAULT_ALERT_POLICY) -> pd.DataFrame:
+    """Add ``alert_score``, ``alert_tier`` and boolean ``alert`` (High or above) columns."""
+    out = df.copy()
+    out["alert_score"] = alert_score(out["expected_cases"], out["upper_80"], policy)
+    idx = assign_tier(out["alert_score"], thresholds)
+    out["alert_tier"] = [C.TIER_NAMES[i] for i in idx]
+    out["alert"] = idx >= 2
+    return out
