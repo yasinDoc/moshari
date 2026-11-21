@@ -41,3 +41,11 @@ def test_bad_inputs_get_clear_errors():
     assert client.get("/wards/NOPE/outlook").status_code == 404
     assert client.get("/forecast", params={"horizon": 7}).status_code == 422
     assert client.get("/forecast", params={"issue_date": "2019-01-02"}).status_code == 422
+
+
+def test_alerts_only_and_policy():
+    cau = client.get("/forecast", params={"issue_date": "2025-06-02", "alerts_only": True}).json()
+    std = client.get("/forecast", params={"issue_date": "2025-06-02", "alerts_only": True,
+                                          "alert_policy": "Standard"}).json()
+    assert all(r["alert"] for r in cau) and len(cau) >= len(std)
+    assert client.get("/forecast", params={"alert_policy": "Reckless"}).status_code == 422

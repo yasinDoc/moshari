@@ -18,6 +18,7 @@ import streamlit as st
 from moshari import config as C
 from moshari.data import file_fingerprint, load_dataset
 from moshari.model import ForecastBundle
+from moshari.risk import ALERT_POLICIES, DEFAULT_ALERT_POLICY
 from moshari.service import ForecastService
 
 BUNDLED = "bundled"
@@ -58,8 +59,13 @@ def data_name() -> str:
 
 
 @st.cache_data(show_spinner=False, max_entries=256)
-def forecast_all(key: str, issue_date: pd.Timestamp, horizon: int, cities: tuple[str, ...]) -> pd.DataFrame:
-    return service().forecast_all(issue_date, horizon, list(cities) or None)
+def forecast_all(key: str, issue_date: pd.Timestamp, horizon: int, cities: tuple[str, ...],
+                 policy: str = DEFAULT_ALERT_POLICY) -> pd.DataFrame:
+    return service().forecast_all(issue_date, horizon, list(cities) or None, policy)
+
+
+def policy() -> str:
+    return st.session_state.get("alert_policy") or DEFAULT_ALERT_POLICY
 
 
 @st.cache_data(show_spinner=False, max_entries=64)
@@ -93,6 +99,8 @@ def settings() -> tuple[pd.Timestamp, int, tuple[str, ...]]:
         st.session_state["issue_date"] = svc.default_issue_date()
     if st.session_state.get("horizon") not in svc.bundle.horizons:
         st.session_state["horizon"] = 3
+    if st.session_state.get("alert_policy") not in ALERT_POLICIES:
+        st.session_state["alert_policy"] = DEFAULT_ALERT_POLICY
 
     with st.container(key="settings"):
         st.select_slider(
@@ -109,7 +117,34 @@ def settings() -> tuple[pd.Timestamp, int, tuple[str, ...]]:
             width="stretch",
             help="Rain takes 2 to 4 weeks to turn into cases, so this is the early-warning window.",
         )
+        st.selectbox(
+            "Alert sensitivity",
+            options=list(ALERT_POLICIES),
+            key="alert_policy",
+            format_func=lambda p: {"Standard": "Standard: expected reaches High",
+                                   "Balanced": "Balanced: midpoint reaches High",
+                                   "Cautious": "Cautious: upper range reaches High"}[p],
+        )
         cities = sorted(svc.wards[C.CITY_COL].unique())
         chosen = st.multiselect("City corporations", cities, key="cities", placeholder="All five")
     horizon = st.session_state.get("horizon") or 3
     return pd.Timestamp(st.session_state["issue_date"]), int(horizon), tuple(chosen)
+
+
+# --------------------------------------------------------------------------- live weather
+@st.cache_data(ttl=600, show_spinner="Fetching live weather…")
+def live_weather(refresh_token: int = 0) -> tuple[pd.DataFrame, dict]:
+    """Daily Open-Meteo weather. Disk cache (6 h) inside; this layer just avoids re-reading it."""
+    from moshari import live
+
+    daily, info = live.fetch_daily(force=refresh_token > 0)
+    return daily, {"source": info.source, "fetched_at": info.fetched_at, "api_calls": info.api_calls}
+
+
+@st.cache_resource(show_spinner="Running the model on live weather…", max_entries=4)
+def live_service(fetched_at: float, through: pd.Timestamp) -> ForecastService:
+    from moshari import live
+
+    daily, _ = live_weather(st.session_state.get("live_refresh", 0))
+    weekly = live.to_weekly(daily)
+    return ForecastService(live.live_frame(service().raw, weekly, through), get_bundle())

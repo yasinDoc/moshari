@@ -16,6 +16,7 @@ import pandas as pd
 from . import config as C
 from .features import FEATURE_COLS, build_features
 from .model import ForecastBundle
+from .risk import DEFAULT_ALERT_POLICY, apply_alert_policy
 
 
 @dataclass
@@ -59,8 +60,12 @@ class ForecastService:
         return dates[dates.get_indexer([target], method="nearest")[0]]
 
     # -------------------------------------------------------------- forecasts
-    def forecast_all(self, issue_date, horizon: int, cities: list[str] | None = None) -> pd.DataFrame:
-        """Risk for every ward, issued at ``issue_date`` for ``horizon`` weeks later."""
+    def forecast_all(self, issue_date, horizon: int, cities: list[str] | None = None,
+                     policy: str = DEFAULT_ALERT_POLICY) -> pd.DataFrame:
+        """Risk for every ward, issued at ``issue_date`` for ``horizon`` weeks later.
+
+        Sorted by alert priority (``alert_score`` under ``policy``), most urgent first.
+        """
         rows = self.features.xs(pd.Timestamp(issue_date), level=C.DATE_COL, drop_level=False)
         if cities:
             rows = rows[rows[C.CITY_COL].isin(cities)]
@@ -73,7 +78,8 @@ class ForecastService:
         )
         out["target_date"] = out[C.DATE_COL] + pd.Timedelta(weeks=horizon)
         out["actual"] = [self._actual(w, d) for w, d in zip(out[C.WARD_COL], out["target_date"])]
-        return out.sort_values("expected_cases", ascending=False).reset_index(drop=True)
+        out = apply_alert_policy(out, self.bundle.tier_thresholds, policy)
+        return out.sort_values(["alert_score", "expected_cases"], ascending=False).reset_index(drop=True)
 
     def forecast_timeline(self, issue_dates, horizon: int, cities: list[str] | None = None) -> pd.DataFrame:
         """Forecasts for every ward across a range of issue weeks (for the season heatmap)."""

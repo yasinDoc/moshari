@@ -1,6 +1,6 @@
 # Moshari architecture
 
-Moshari forecasts dengue cases for each of 60 city wards 2, 3 and 4 weeks ahead. It turns those forecasts into Low, Medium, High or Critical risk with a response for each tier. Everything runs locally from a saved model, so there are no API calls at forecast time.
+Moshari forecasts dengue cases for each of 60 city wards 2, 3 and 4 weeks ahead. It turns those forecasts into Low, Medium, High or Critical risk with a response for each tier. Forecasting runs locally from a saved model. The only runtime API call is one cached Open-Meteo request for the Live outlook page.
 
 ## Data flow
 
@@ -19,6 +19,7 @@ flowchart LR
     C --> J
     J --> K["Streamlit dashboard<br/>ward net, ward forecast,<br/>what-if, accuracy, upload"]
     J --> L["FastAPI REST<br/>/forecast, /outlook,<br/>/explain, /scenario"]
+    M["Open-Meteo<br/>1 batched request,<br/>6 h disk cache"] -->|"live weather"| J
     I --> K
 ```
 
@@ -67,11 +68,26 @@ The dashboard runs replays inside 2024–25 using this same model, so every fore
 - Explanations are exact and free: LightGBM computes TreeSHAP natively (`pred_contrib=True`), so no extra library is needed. In log space the contributions add up exactly to the prediction, which a test verifies. The UI shows them as multipliers ("rainfall ×4.5").
 - Tiers use fixed thresholds from training-year case quantiles (P70, P85, P95, which are 2, 7 and 13 cases a week). They are stored in the bundle, so tiers mean the same thing everywhere.
 
+## Alert sensitivity
+
+The tier shows the best estimate. Whether a ward goes **on alert** is a separate choice with a trade-off, measured on the 2024–25 hold-out (3-week horizon):
+
+| Rule | Alerts when | High-risk weeks caught | Alerts that were real | Alerted in time for season onset |
+|---|---|---|---|---|
+| Standard | expected cases reach High | 71% | 67% | 35% |
+| Balanced | midpoint of expected and upper bound reaches High | 87% | 59% | 57% |
+| **Cautious (default)** | upper end of the 80% range reaches High | **98%** | 49% | **90%** |
+
+"Alerted in time" is the share of ward-seasons where an alert was already out by the first week cases actually reached High. In peak weeks most wards really are high-risk, so Cautious flags nearly all of them; its value is raising the alarm at season onset, when Standard is usually a week late.
+
+Missing an outbreak costs far more than an extra larviciding visit, so Cautious is the default. Officers can switch rules in the sidebar.
+
 ## Compute and API cost controls
 
 | Control | Where | Effect |
 |---|---|---|
-| Zero runtime API calls | whole app | Forecasts, explanations and what-ifs run on the local CPU. No paid weather API and no LLM, so token cost is 0 by design. |
+| Local inference, no LLM | whole app | Forecasts, explanations and what-ifs run on the local CPU. No LLM, so token cost is 0 by design. |
+| Batched, cached weather API | `live.py` | Live mode fetches all 5 cities in **one** Open-Meteo request, caches it on disk for 6 hours, rate-limits manual refresh to once per 10 minutes, and falls back to the last good response when offline. |
 | Serialized model | `models/moshari_lgbm.joblib` | Training (about 60 s on a laptop CPU) happens once. Startup only loads a 6.5 MB file. Boosters are stored in LightGBM's text format inside joblib, so they load across library versions. |
 | Process-wide model cache | `st.cache_resource` | The model and feature table load once per server, shared across users. |
 | Input-keyed result cache | `st.cache_data` on (data fingerprint, week, horizon, cities) | Repeated views are served from memory. A new upload changes the fingerprint and invalidates only its own entries. |
@@ -80,10 +96,12 @@ The dashboard runs replays inside 2024–25 using this same model, so every fore
 | One-shot data fetch | `scripts/fetch_data.py` | The dataset is committed. Refreshing it is one validated HTTP GET with no key. |
 | Validation before compute | `data.validate` | Bad uploads are rejected before any feature or model work runs. |
 
-If the final sprint adds live weather or an LLM summary, the same pattern applies: fetch once per ward per day into a disk cache keyed by date, batch all wards into a single request, and cap LLM output tokens, with the cached template text as the fallback.
+Live weather already follows this pattern (see `live.py`). If the final sprint adds an LLM summary, the same applies: fetch once per ward per day into a disk cache keyed by date, batch all wards into a single request, and cap LLM output tokens, with the cached template text as the fallback.
 
 ## Limitations
 
 - The source data is weekly, so forecasts and what-if results are updated at a weekly cadence rather than continuously.
 - The data has no ward coordinates or real geographic boundaries. The dashboard therefore uses a schematic ward-net view, not a real map.
 - Critical is rare in the historical forecasts because it is a high-tail tier; it may not appear in every week or horizon.
+- Live mode uses real weather but no live case reports yet, so each ward's recent case history is estimated from its seasonal average.
+- Live weather is one point per city corporation, so all wards in a city share the same rainfall.

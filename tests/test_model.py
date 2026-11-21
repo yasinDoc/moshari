@@ -55,3 +55,21 @@ def test_conformal_offset_hits_target_coverage():
     off = conformal_offset(y, np.full_like(y, -0.5), np.full_like(y, 0.5), coverage=0.8)
     cover = ((y >= -0.5 - off) & (y <= 0.5 + off)).mean()
     assert 0.79 <= cover <= 0.82
+
+
+def test_cautious_alerts_cover_standard_alerts(svc):
+    d = svc.default_issue_date()
+    std = svc.forecast_all(d, 3, policy="Standard").set_index("ward_id")["alert"]
+    cau = svc.forecast_all(d, 3, policy="Cautious").set_index("ward_id")["alert"]
+    assert (cau | ~std).all()  # every standard alert is also a cautious alert
+    assert cau.sum() >= std.sum()
+
+
+def test_alert_policy_metrics_trade_recall_for_precision():
+    from moshari.evaluation import alert_policy_metrics
+
+    y = np.array([0, 1, 8, 9, 3, 12])
+    exp = np.array([0.5, 1, 6, 9, 3, 10])
+    up = exp + 3
+    m = alert_policy_metrics(y, exp, up, [2.0, 7.0, 13.0])
+    assert m["Cautious"]["recall"] >= m["Standard"]["recall"]

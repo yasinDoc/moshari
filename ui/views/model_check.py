@@ -69,6 +69,50 @@ with st.container(key="card-replay"):
 
 theme.gap()
 
+with st.container(key="card-alerts"):
+    pols = hm.get("alert_policies", {})
+    on_time = hm.get("alert_on_time", {})
+    current = state.policy()
+    theme.card_title(
+        "Alert sensitivity",
+        "When should a ward go on alert? Missing an outbreak costs more than an extra larviciding visit, "
+        "so Moshari defaults to the cautious rule, which raises the alarm before the season's first high-risk "
+        "week far more often. Change it under Forecast settings.",
+        f"Using: {current}",
+    )
+    if pols:
+        a, b = st.columns([3, 2])
+        with a:
+            names = list(pols)
+            fig = go.Figure([
+                go.Bar(x=names, y=[pols[n]["recall"] for n in names], name="High-risk weeks caught (recall)",
+                       marker_color=theme.ACCENT, marker_line_width=0,
+                       text=[f"{pols[n]['recall']:.0%}" for n in names], textposition="outside", cliponaxis=False),
+                go.Bar(x=names, y=[pols[n]["precision"] for n in names], name="Alerts that were real (precision)",
+                       marker_color="#C1B6A0", marker_line_width=0,
+                       text=[f"{pols[n]['precision']:.0%}" for n in names], textposition="outside", cliponaxis=False),
+            ])
+            fig.update_layout(barmode="group", bargap=0.35, bargroupgap=0.08, margin=dict(l=0, r=0, t=40, b=0),
+                              yaxis=dict(range=[0, 1.12], tickformat=".0%"))
+            theme.plot(fig, 300)
+        with b:
+            rows = []
+            for n, v in pols.items():
+                on = " on" if n == current else ""
+                rows.append(
+                    f'<div class="m-row{on}"><div class="n">{theme.icon("notifications_active" if n == current else "notifications")}</div>'
+                    f'<div><div class="w">{n}</div><div class="c">{v["missed"]:,} high-risk weeks missed, '
+                    f'{v["false_alarms"]:,} false alarms</div></div>'
+                    f'<div class="e">{on_time.get(n, float("nan")):.0%}<small>alerted in time</small></div></div>'
+                )
+            st.html('<div class="m-list">' + "".join(rows) + "</div>")
+        st.html(f'<p class="m-note">Counted over {hm["n_test"]:,} ward-weeks in 2024 and 2025 at a {horizon}-week horizon. '
+                "<b>Alerted in time</b> is the share of ward-seasons where an alert was already out by the first week "
+                "cases actually reached High. The risk tier always shows the best estimate; the alert rule only decides "
+                "who goes on the watch list.</p>")
+
+theme.gap()
+
 left, right = st.columns(2)
 with left:
     with st.container(key="card-baselines"):
