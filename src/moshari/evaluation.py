@@ -54,6 +54,29 @@ def alert_policy_metrics(y_true, expected, upper, thresholds: list[float]) -> di
     return out
 
 
+def alert_onset_metrics(df: pd.DataFrame, thresholds: list[float]) -> dict[str, float]:
+    """Share of ward-seasons where an alert was out by the first week cases actually reached High.
+
+    ``df`` needs ward_id, target_date, actual, expected, upper_80 for one horizon.
+    """
+    from .risk import ALERT_POLICIES, alert_score
+
+    d = df.assign(year=pd.to_datetime(df["target_date"]).dt.year)
+    out = {}
+    for name in ALERT_POLICIES:
+        d["score"] = alert_score(d["expected"], d["upper_80"], name)
+        on_time, n = 0, 0
+        for _, g in d.groupby(["ward_id", "year"]):
+            first_high = g.loc[g["actual"] >= thresholds[1], "target_date"].min()
+            if pd.isna(first_high):
+                continue
+            n += 1
+            first_alert = g.loc[g["score"] >= thresholds[1], "target_date"].min()
+            on_time += int(pd.notna(first_alert) and first_alert <= first_high)
+        out[name] = float(on_time / max(n, 1))
+    return out
+
+
 def interval_coverage(y_true, lo, hi) -> float:
     y = np.asarray(y_true, dtype=float)
     return float(((y >= np.asarray(lo)) & (y <= np.asarray(hi))).mean())

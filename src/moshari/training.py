@@ -24,6 +24,7 @@ import pandas as pd
 from . import config as C
 from .data import file_fingerprint, load_dataset
 from .evaluation import (
+    alert_onset_metrics,
     alert_policy_metrics,
     climatology,
     interval_coverage,
@@ -115,6 +116,12 @@ def run_training(production: bool = False, log=print) -> dict[str, Any]:
             "interval_mean_width": float(np.mean(hi - lo)),
             "confusion": tier_confusion(y_te, pred, thresholds).to_dict(),
             "alert_policies": alert_policy_metrics(y_te, pred, hi, thresholds),
+            "alert_on_time": alert_onset_metrics(
+                pd.DataFrame({"ward_id": te[C.WARD_COL].to_numpy(),
+                              "target_date": (te[C.DATE_COL] + pd.Timedelta(weeks=h)).to_numpy(),
+                              "actual": y_te, "expected": pred, "upper_80": hi}),
+                thresholds,
+            ),
         }
         best_base = min(v["mae"] for v in hm["baselines"].values())
         hm["mae_improvement_vs_best_baseline"] = float(1 - hm["model"]["mae"] / best_base)

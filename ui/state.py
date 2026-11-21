@@ -117,13 +117,34 @@ def settings() -> tuple[pd.Timestamp, int, tuple[str, ...]]:
             width="stretch",
             help="Rain takes 2 to 4 weeks to turn into cases, so this is the early-warning window.",
         )
-        st.segmented_control(
+        st.selectbox(
             "Alert sensitivity",
             options=list(ALERT_POLICIES),
             key="alert_policy",
-            width="stretch",
+            format_func=lambda p: {"Standard": "Standard: expected reaches High",
+                                   "Balanced": "Balanced: midpoint reaches High",
+                                   "Cautious": "Cautious: upper range reaches High"}[p],
         )
         cities = sorted(svc.wards[C.CITY_COL].unique())
         chosen = st.multiselect("City corporations", cities, key="cities", placeholder="All five")
     horizon = st.session_state.get("horizon") or 3
     return pd.Timestamp(st.session_state["issue_date"]), int(horizon), tuple(chosen)
+
+
+# --------------------------------------------------------------------------- live weather
+@st.cache_data(ttl=600, show_spinner="Fetching live weather…")
+def live_weather(refresh_token: int = 0) -> tuple[pd.DataFrame, dict]:
+    """Daily Open-Meteo weather. Disk cache (6 h) inside; this layer just avoids re-reading it."""
+    from moshari import live
+
+    daily, info = live.fetch_daily(force=refresh_token > 0)
+    return daily, {"source": info.source, "fetched_at": info.fetched_at, "api_calls": info.api_calls}
+
+
+@st.cache_resource(show_spinner="Running the model on live weather…", max_entries=4)
+def live_service(fetched_at: float, through: pd.Timestamp) -> ForecastService:
+    from moshari import live
+
+    daily, _ = live_weather(st.session_state.get("live_refresh", 0))
+    weekly = live.to_weekly(daily)
+    return ForecastService(live.live_frame(service().raw, weekly, through), get_bundle())

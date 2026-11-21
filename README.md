@@ -12,17 +12,21 @@
 
 ## Run it locally
 
-Needs Python 3.10 or newer. The trained model and the dataset are in the repo, so no training or downloads are needed beyond the Python packages.
+Needs Python 3.10 or newer and git. The trained model and the dataset are in the repo, so the only download is the Python packages.
+
+### Fastest: with uv (about 1 minute)
+
+[uv](https://docs.astral.sh/uv/) installs the same packages as pip, much faster. A cold install with no cache took **56 seconds** here, against **6 min 11 s** for plain pip.
 
 **Windows (PowerShell)**
 
 ```powershell
 git clone https://github.com/yasinDoc/moshari.git
 cd moshari
-python -m venv .venv
-.venv\Scripts\Activate.ps1
-pip install -r requirements.txt
-streamlit run app.py
+pip install uv
+uv venv
+uv pip install -r requirements.txt
+.venv\Scripts\streamlit run app.py
 ```
 
 **macOS / Linux**
@@ -30,7 +34,19 @@ streamlit run app.py
 ```bash
 git clone https://github.com/yasinDoc/moshari.git
 cd moshari
-python3 -m venv .venv && source .venv/bin/activate
+pip install uv
+uv venv
+uv pip install -r requirements.txt
+.venv/bin/streamlit run app.py
+```
+
+Or run the one-step script, which does the same thing: `powershell -ExecutionPolicy Bypass -File run.ps1` on Windows, `./run.sh` on macOS/Linux.
+
+### With plain pip (slower, 2 to 8 minutes depending on your connection)
+
+```powershell
+python -m venv .venv
+.venv\Scripts\activate          # macOS/Linux: source .venv/bin/activate
 pip install -r requirements.txt
 streamlit run app.py
 ```
@@ -39,15 +55,17 @@ The dashboard opens at http://localhost:8501.
 
 ## Tested on
 
-| Operating system | Python | Setup time |
-|---|---|---|
-| Windows 11 Home Single Language | 3.15.2 | 7 min 40 sec |
+| Operating system | Python | Installer | Setup time |
+|---|---|---|---|
+| Windows 10 Pro | 3.14.0 | uv, cold, no cache | 56 s |
+| Windows 10 Pro | 3.14.0 | pip, cold, no cache | 6 min 11 s |
+| Windows 11 Home Single Language | 3.15.2 | pip | 7 min 40 s |
 
 Optional:
 
 ```bash
 python scripts/train.py            # retrain and re-evaluate (about 1 minute on a laptop CPU)
-pip install -r requirements-dev.txt && pytest   # 21 tests
+pip install -r requirements-dev.txt && pytest   # 29 tests
 docker build -t moshari . && docker run -p 8501:8501 moshari
 ```
 
@@ -55,12 +73,15 @@ docker build -t moshari . && docker run -p 8501:8501 moshari
 
 | Page | What a health officer gets |
 |---|---|
-| **Ward overview** | Every ward's risk for the chosen week as tiles in a net, grouped by city corporation, plus a whole-season view. Headline numbers, the six wards to send teams to first, and risk by city. |
+| **Overview** | Every ward's risk for the chosen week as tiles in a net, grouped by city corporation, plus a whole-season view. Wards on alert, the six wards to send teams to first, and risk by city. |
+| **Live outlook** | Today's real weather from Open-Meteo (last 13 weeks plus a 14-day forecast) run through the same model, for every ward. One cached request for all five cities. |
 | **Ward forecast** | One ward's 2-, 3- and 4-week outlook with an 80% range and the recommended response. A chart that lines up rain with later cases. The drivers behind the forecast, and what-if sliders for rain, temperature and humidity that re-run the model live. |
 | **Model accuracy** | Hold-out results for 2024–25 against three simple baselines, a tier confusion matrix, a replay of both seasons, and the evidence for the 3-week breeding lag. |
 | **Data** | Upload a newer weekly CSV. It is validated, then every page forecasts from it. |
 
 ![Ward forecast: outlook, rain-to-cases chart and drivers](docs/img/ward-forecast.png)
+
+![Live outlook: real Open-Meteo weather for five cities, run through the model](docs/img/live.png)
 
 ## REST API
 
@@ -84,7 +105,7 @@ uvicorn moshari.api:app --app-dir src --port 8000   # interactive docs at http:/
 1. **Validate** the weekly ward file: schema, plausible ranges, duplicates and gaps between weeks ([`data.py`](src/moshari/data.py)).
 2. **Build lag features per ward**: rainfall 0–8 weeks back, the 2–4-week breeding window, temperature and humidity rolls, recent cases, ward vulnerability and season ([`features.py`](src/moshari/features.py)).
 3. **Forecast** with LightGBM: a Poisson model per horizon for expected cases and quantile models for an 80% range calibrated with conformal prediction ([`model.py`](src/moshari/model.py)).
-4. **Tier and respond**: Low, Medium, High or Critical from training-year thresholds, each with a response playbook ([`risk.py`](src/moshari/risk.py)).
+4. **Tier and respond**: Low, Medium, High or Critical from training-year thresholds, each with a response playbook ([`risk.py`](src/moshari/risk.py)). An **alert sensitivity** setting (Standard, Balanced, Cautious) decides which wards go on the watch list; the default Cautious rule catches 98% of high-risk weeks in the hold-out years.
 5. **Explain**: TreeSHAP contributions computed natively by LightGBM, grouped into drivers like "Rainfall (breeding clock) ×4.5".
 
 On 2024–25, which the model never saw, 3-week forecasts are off by **1.03 cases per ward per week** on average. That is 17% better than the best baseline, with 83% of ward-weeks in the right tier. Full method, split and cost controls are in **[ARCHITECTURE.md](ARCHITECTURE.md)**.
@@ -136,9 +157,10 @@ We disclose every AI tool and outside service used to build or run Moshari.
 | Service | When | Notes |
 |---|---|---|
 | Google Sheets CSV export | Once, to download the challenge dataset | `scripts/fetch_data.py`; the CSV is committed, so the app never calls it |
-| Google Fonts | When the dashboard loads in a browser | Bricolage Grotesque, Instrument Sans, Hind Siliguri; falls back to system fonts offline |
+| Open-Meteo forecast API | Live outlook page only | One batched request for 5 cities, cached on disk for 6 hours, no key; the rest of the app works offline |
+| Google Fonts | When the dashboard loads in a browser | Manrope, Hind Siliguri; falls back to system fonts offline |
 
-Moshari makes **no API calls while forecasting**: no weather API and no LLM. All inference runs locally.
+All forecasting runs locally and no LLM is used. The only runtime API is Open-Meteo on the Live outlook page: at most one request every 6 hours.
 
 ## License
 

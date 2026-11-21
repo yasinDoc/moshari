@@ -71,11 +71,13 @@ theme.gap()
 
 with st.container(key="card-alerts"):
     pols = hm.get("alert_policies", {})
+    on_time = hm.get("alert_on_time", {})
     current = state.policy()
     theme.card_title(
         "Alert sensitivity",
         "When should a ward go on alert? Missing an outbreak costs more than an extra larviciding visit, "
-        "so Moshari defaults to the cautious rule. Change it under Forecast settings.",
+        "so Moshari defaults to the cautious rule, which raises the alarm before the season's first high-risk "
+        "week far more often. Change it under Forecast settings.",
         f"Using: {current}",
     )
     if pols:
@@ -96,16 +98,18 @@ with st.container(key="card-alerts"):
         with b:
             rows = []
             for n, v in pols.items():
-                on = " style=\"box-shadow:var(--press)\"" if n == current else ""
+                on = " on" if n == current else ""
                 rows.append(
-                    f'<div class="m-row"{on}><div class="n">{theme.icon("notifications_active" if n == current else "notifications")}</div>'
+                    f'<div class="m-row{on}"><div class="n">{theme.icon("notifications_active" if n == current else "notifications")}</div>'
                     f'<div><div class="w">{n}</div><div class="c">{v["missed"]:,} high-risk weeks missed, '
                     f'{v["false_alarms"]:,} false alarms</div></div>'
-                    f'<div class="e">{v["recall"]:.0%}<small>caught</small></div></div>'
+                    f'<div class="e">{on_time.get(n, float("nan")):.0%}<small>alerted in time</small></div></div>'
                 )
             st.html('<div class="m-list">' + "".join(rows) + "</div>")
         st.html(f'<p class="m-note">Counted over {hm["n_test"]:,} ward-weeks in 2024 and 2025 at a {horizon}-week horizon. '
-                "The risk tier always shows the best estimate; the alert rule only decides who goes on the watch list.</p>")
+                "<b>Alerted in time</b> is the share of ward-seasons where an alert was already out by the first week "
+                "cases actually reached High. The risk tier always shows the best estimate; the alert rule only decides "
+                "who goes on the watch list.</p>")
 
 theme.gap()
 

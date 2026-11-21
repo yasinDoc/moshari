@@ -83,6 +83,11 @@
           "false_alarms": 907
         }
       },
+      "alert_on_time": {
+        "Standard": 0.3949579831932773,
+        "Balanced": 0.7563025210084033,
+        "Cautious": 0.9663865546218487
+      },
       "mae_improvement_vs_best_baseline": 0.18971919511827928
     },
     "3": {
@@ -167,6 +172,11 @@
           "missed": 18,
           "false_alarms": 894
         }
+      },
+      "alert_on_time": {
+        "Standard": 0.35294117647058826,
+        "Balanced": 0.5714285714285714,
+        "Cautious": 0.8991596638655462
       },
       "mae_improvement_vs_best_baseline": 0.168011736749051
     },
@@ -253,6 +263,11 @@
           "false_alarms": 934
         }
       },
+      "alert_on_time": {
+        "Standard": 0.31932773109243695,
+        "Balanced": 0.5714285714285714,
+        "Cautious": 0.8823529411764706
+      },
       "mae_improvement_vs_best_baseline": 0.042488533432766706
     }
   },
@@ -267,7 +282,7 @@
     "data_rows": 31320,
     "wards": 60,
     "lightgbm_version": "4.7.0",
-    "trained_at": "2026-11-22T00:04:12",
+    "trained_at": "2026-11-22T00:23:20",
     "feature_count": 33
   },
   "tier_thresholds": [
@@ -463,5 +478,5 @@
     "week_sin": "Time of year (sin)",
     "week_cos": "Time of year (cos)"
   },
-  "train_seconds": 93.6
+  "train_seconds": 74.6
 }
