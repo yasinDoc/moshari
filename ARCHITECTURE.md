@@ -81,3 +81,9 @@ The dashboard runs replays inside 2024–25 using this same model, so every fore
 | Validation before compute | `data.validate` | Bad uploads are rejected before any feature or model work runs. |
 
 If the final sprint adds live weather or an LLM summary, the same pattern applies: fetch once per ward per day into a disk cache keyed by date, batch all wards into a single request, and cap LLM output tokens, with the cached template text as the fallback.
+
+## Limitations
+
+- The source data is weekly, so forecasts and what-if results are updated at a weekly cadence rather than continuously.
+- The data has no ward coordinates or real geographic boundaries. The dashboard therefore uses a schematic ward-net view, not a real map.
+- Critical is rare in the historical forecasts because it is a high-tail tier; it may not appear in every week or horizon.
