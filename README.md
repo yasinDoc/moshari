@@ -19,6 +19,8 @@ Tested on 2024 and 2025, two seasons the model never saw during training (3-week
 | Right risk tier | **83%** of ward-weeks |
 | 80% forecast range | covers **80%** of actual counts |
 | High-risk weeks caught (cautious alerts) | **98%** |
+| Critical weeks caught (outbreak probability) | **70%**, up from 28% using expected cases |
+| 4-week error with Open-Meteo rain forecast | **9% lower** (1.19 to 1.08 cases) |
 | Alert out before the season's first high-risk week | **90%** of ward-seasons, against 35% for a plain threshold |
 | Setup time with uv | **56 s** from a cold start |
 

@@ -20,8 +20,20 @@ GROUP_HUMID = "Humidity"
 GROUP_WARD = "Ward vulnerability"
 GROUP_CASES = "Recent transmission"
 GROUP_SEASON = "Seasonality"
+GROUP_FORECAST = "Weather forecast"
 
 DRIVER_GROUPS = (GROUP_RAIN, GROUP_TEMP, GROUP_HUMID, GROUP_WARD, GROUP_CASES, GROUP_SEASON)
+
+# Weather for the 1–2 weeks *after* the issue week. Only forecast-assisted models use
+# these: in training they come from observed weather (with noise added to mimic
+# forecast error); live, they come from Open-Meteo's forecast.
+LEAD_SPECS: dict[str, tuple[str, str]] = {
+    "rain_lead_1w": (GROUP_FORECAST, "Rain forecast, next week"),
+    "rain_lead_2w": (GROUP_FORECAST, "Rain forecast, week after"),
+    "temp_lead_1w": (GROUP_FORECAST, "Temperature forecast, next week"),
+    "humid_lead_1w": (GROUP_FORECAST, "Humidity forecast, next week"),
+}
+LEAD_COLS = list(LEAD_SPECS)
 
 
 def _feature_specs() -> dict[str, tuple[str, str]]:
@@ -141,6 +153,12 @@ def build_features(df: pd.DataFrame, city_categories: list[str] | None = None) -
     week = df[C.DATE_COL].dt.isocalendar().week.astype(float)
     out["week_sin"] = np.sin(2 * np.pi * week / 52.18)
     out["week_cos"] = np.cos(2 * np.pi * week / 52.18)
+
+    # --- Weather leads (for forecast-assisted models only) ------------------ #
+    out["rain_lead_1w"] = g["rainfall_mm"].shift(-1)
+    out["rain_lead_2w"] = g["rainfall_mm"].shift(-2)
+    out["temp_lead_1w"] = g["avg_temp_c"].shift(-1)
+    out["humid_lead_1w"] = g["relative_humidity_pct"].shift(-1)
 
     # --- Forward targets: cases h weeks after the issue week --------------- #
     for h in C.HORIZONS:

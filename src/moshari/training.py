@@ -20,6 +20,7 @@ from typing import Any
 import lightgbm as lgb
 import numpy as np
 import pandas as pd
+from sklearn.metrics import roc_auc_score
 
 from . import config as C
 from .data import file_fingerprint, load_dataset
@@ -33,8 +34,8 @@ from .evaluation import (
     tier_confusion,
     tier_metrics,
 )
-from .features import FEATURE_COLS, FEATURE_SPECS, build_features, lag_correlations, target_col
-from .model import KINDS, ForecastBundle, conformal_offset, fit_booster, interval
+from .features import FEATURE_COLS, FEATURE_SPECS, LEAD_COLS, build_features, lag_correlations, target_col
+from .model import FORECAST_KIND, KINDS, PROB_KINDS, ForecastBundle, conformal_offset, fit_booster, interval
 from .risk import assign_tier, tier_thresholds
 
 
@@ -47,6 +48,31 @@ def _split(feats: pd.DataFrame, horizon: int) -> dict[str, pd.DataFrame]:
         "valid": usable[(target_date > C.TRAIN_END) & (target_date <= C.VALID_END)],
         "test": usable[target_date > C.VALID_END],
     }
+
+
+def _best_f1_threshold(y: np.ndarray, p: np.ndarray) -> float:
+    """Probability cut-off that maximises F1 on the validation year."""
+    def f1(t):
+        f = p >= t
+        tp = int((f & y).sum())
+        return 2 * tp / max(int(f.sum() + y.sum()), 1)
+    return float(max(np.linspace(0.05, 0.9, 86), key=f1))
+
+
+def _with_forecast_noise(df: pd.DataFrame, seed: int) -> pd.DataFrame:
+    """Observed future weather plus noise, standing in for an imperfect weather forecast.
+
+    Rain gets multiplicative log-normal error (sigma 0.5, roughly ±65%), temperature
+    ±1 °C, humidity ±5 points. Training on this keeps the model from over-trusting
+    forecast rain.
+    """
+    rng = np.random.default_rng(seed)
+    out = df.copy()
+    for c in ("rain_lead_1w", "rain_lead_2w"):
+        out[c] = out[c] * np.exp(rng.normal(0, 0.5, len(out)))
+    out["temp_lead_1w"] = out["temp_lead_1w"] + rng.normal(0, 1.0, len(out))
+    out["humid_lead_1w"] = (out["humid_lead_1w"] + rng.normal(0, 5.0, len(out))).clip(0, 100)
+    return out
 
 
 def run_training(production: bool = False, log=print) -> dict[str, Any]:
@@ -67,6 +93,7 @@ def run_training(production: bool = False, log=print) -> dict[str, Any]:
     backtests = []
     importance = {}
     offsets: dict[int, float] = {}
+    prob_thresholds: dict[int, dict[str, float]] = {}
 
     for h in C.HORIZONS:
         tcol = target_col(h)
@@ -125,7 +152,62 @@ def run_training(production: bool = False, log=print) -> dict[str, Any]:
         }
         best_base = min(v["mae"] for v in hm["baselines"].values())
         hm["mae_improvement_vs_best_baseline"] = float(1 - hm["model"]["mae"] / best_base)
+        # ---- outbreak probabilities: P(High), P(Critical) -------------------
+        prob_thresholds[h] = {}
+        probs_te: dict[str, np.ndarray] = {}
+        hm["probability"] = {}
+        for kind, tier in PROB_KINDS.items():
+            cut = thresholds[C.TIER_NAMES.index(tier) - 1]
+            y_tr, y_va = (tr[tcol] >= cut).astype(int), (va[tcol] >= cut).astype(int)
+            a = fit_booster(kind, tr[FEATURE_COLS], y_tr, va[FEATURE_COLS], y_va)
+            prob_thresholds[h][kind] = _best_f1_threshold(y_va.to_numpy().astype(bool), a.predict(va[FEATURE_COLS]))
+            y_fit = (final_fit[tcol] >= cut).astype(int)
+            boosters[(h, kind)] = fit_booster(kind, final_fit[FEATURE_COLS], y_fit,
+                                              num_rounds=max(int(a.best_iteration * 1.1), 50))
+            pt = boosters[(h, kind)].predict(X_te)
+            probs_te[kind] = pt
+            actual = y_te >= cut
+            flag, flag_exp = pt >= prob_thresholds[h][kind], pred >= cut
+            tp, tp_exp = int((flag & actual).sum()), int((flag_exp & actual).sum())
+            hm["probability"][tier] = {
+                "threshold": prob_thresholds[h][kind],
+                "auc": float(roc_auc_score(actual, pt)),
+                "brier": float(np.mean((pt - actual) ** 2)),
+                "recall": tp / max(int(actual.sum()), 1),
+                "precision": tp / max(int(flag.sum()), 1),
+                "recall_expected_rule": tp_exp / max(int(actual.sum()), 1),
+                "precision_expected_rule": tp_exp / max(int(flag_exp.sum()), 1),
+                "n_actual": int(actual.sum()),
+            }
+        probs_te["p_crit"] = np.minimum(probs_te["p_crit"], probs_te["p_high"])
+
+        # ---- forecast-assisted model (uses next 1–2 weeks of weather) --------
+        lead_ok = lambda d: d.dropna(subset=LEAD_COLS)  # noqa: E731
+        cols_fc = [*FEATURE_COLS, *LEAD_COLS]
+        tr_f, va_f = _with_forecast_noise(lead_ok(tr), 1), _with_forecast_noise(lead_ok(va), 2)
+        a = fit_booster(FORECAST_KIND, tr_f[cols_fc], tr_f[tcol], va_f[cols_fc], va_f[tcol])
+        fit_f = _with_forecast_noise(lead_ok(final_fit), 3)
+        boosters[(h, FORECAST_KIND)] = fit_booster(FORECAST_KIND, fit_f[cols_fc], fit_f[tcol],
+                                                    num_rounds=max(int(a.best_iteration * 1.1), 50))
+        te_f = lead_ok(te)
+        y_f = te_f[tcol].to_numpy()
+        base_f = np.clip(bundle_h["mean"].predict(te_f[FEATURE_COLS]), 0, None)
+        clim_f = climatology(train_raw, te_f, h).fillna(0).to_numpy()
+        perfect = boosters[(h, FORECAST_KIND)].predict(te_f[cols_fc])
+        realistic = boosters[(h, FORECAST_KIND)].predict(_with_forecast_noise(te_f, 4)[cols_fc])
+        hm["forecast_assisted"] = {
+            "mae_without_forecast": regression_metrics(y_f, base_f)["mae"],
+            "mae_realistic_forecast": regression_metrics(y_f, realistic)["mae"],
+            "mae_perfect_forecast": regression_metrics(y_f, perfect)["mae"],
+            "mae_seasonal_average": regression_metrics(y_f, clim_f)["mae"],
+            "n_test": int(len(te_f)),
+        }
         metrics["horizons"][str(h)] = hm
+        pc = hm["probability"]["Critical"]
+        fa = hm["forecast_assisted"]
+        log(f"  Critical caught: {pc['recall_expected_rule']:.0%} by expected cases -> {pc['recall']:.0%} by probability "
+            f"(AUC {pc['auc']:.3f}) · with rain forecast MAE {fa['mae_without_forecast']:.2f} -> "
+            f"{fa['mae_realistic_forecast']:.2f} (perfect {fa['mae_perfect_forecast']:.2f})")
         log(f"  MAE {hm['model']['mae']:.2f} · RMSE {hm['model']['rmse']:.2f} · "
             f"tier acc {hm['model']['tier_accuracy']:.1%} · alert recall {hm['model']['alert_recall']:.1%} · "
             f"80% PI coverage {hm['interval_coverage_80']:.1%} · "
@@ -148,6 +230,8 @@ def run_training(production: bool = False, log=print) -> dict[str, Any]:
                     "lower_80": lo,
                     "upper_80": hi,
                     "tier_idx": assign_tier(pred, thresholds),
+                    "p_high": probs_te["p_high"],
+                    "p_crit": probs_te["p_crit"],
                     "actual_tier_idx": assign_tier(y_te, thresholds),
                     **{f"base_{k}": v for k, v in baselines.items()},
                 }
@@ -166,7 +250,8 @@ def run_training(production: bool = False, log=print) -> dict[str, Any]:
         "trained_at": pd.Timestamp.now().isoformat(timespec="seconds"),
         "feature_count": len(FEATURE_COLS),
     }
-    bundle = ForecastBundle(boosters, city_categories, thresholds, metadata, interval_offsets=offsets)
+    bundle = ForecastBundle(boosters, city_categories, thresholds, metadata, interval_offsets=offsets,
+                            prob_thresholds=prob_thresholds)
     path = bundle.save()
 
     C.ARTIFACTS_DIR.mkdir(parents=True, exist_ok=True)

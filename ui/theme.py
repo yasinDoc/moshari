@@ -169,6 +169,7 @@ a.m-cell { cursor:pointer; }
 .m-cell .w { font-size:11px; font-weight:700; opacity:.85; line-height:1; }
 .m-cell .v { font-size:16px; font-weight:800; line-height:1.15; margin-top:3px; font-variant-numeric:tabular-nums; }
 .m-cell.t3 { box-shadow:var(--raise-xs), inset 0 0 0 2px rgba(255,255,255,.45); }
+.m-cell.cw { box-shadow:var(--raise-xs), 0 0 0 2.5px $CRIT; }
 .m-cell.up::after { content:""; position:absolute; top:5px; right:5px; width:7px; height:7px; border-radius:50%;
   background:#fff; box-shadow:0 0 0 2px $CRIT; }
 /* hover card */
@@ -215,6 +216,11 @@ a.m-cell { cursor:pointer; }
 .m-hero .tier { font-size:44px; font-weight:800; line-height:1.05; margin:var(--s2) 0 var(--s3); letter-spacing:-0.03em; }
 .m-hero .num { font-size:16px; line-height:1.6; color:var(--ink-2); }
 .m-hero .num b { color:var(--ink); font-size:18px; }
+.m-probs { display:grid; gap:6px; margin-top:var(--s3); }
+.m-probs > div { display:grid; grid-template-columns:128px 1fr 44px; align-items:center; gap:10px; font-size:13px; color:var(--ink-2); }
+.m-probs b { text-align:right; color:var(--ink); font-variant-numeric:tabular-nums; }
+.m-probs .pb { height:8px; border-radius:99px; box-shadow:var(--press-sm); overflow:hidden; display:block; }
+.m-probs .pb span { display:block; height:100%; border-radius:99px; }
 .m-act { margin-top:var(--s5); padding:var(--s4) 18px; border-radius:var(--r-md); box-shadow:var(--press); background:var(--base); }
 .m-act .h { display:flex; align-items:center; gap:var(--s2); font-size:15px; font-weight:700; color:var(--ink); margin-bottom:4px; }
 .m-act .h .mi { font-size:18px; color:var(--accent); }

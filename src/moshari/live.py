@@ -10,9 +10,11 @@ Cost controls
   labelled stale; if there is none, the caller gets a clear error.
 * No API key, no personal data in the request.
 
-Assumption: live dengue case reports are not connected yet, so each ward's recent
-case history is estimated from its own seasonal average for those weeks. Weather
-and ward vulnerability are real; the case-history features are estimates.
+Assumption: live dengue case reports are not connected yet. Each ward's recent case
+history is therefore *nowcast*: it starts from the ward's seasonal average and the
+most recent weeks are replaced by the model's own 2-week forecasts run on the live
+weather, so a wet spell raises estimated recent cases. Weather and ward vulnerability
+are real; the case-history features are estimates.
 """
 
 from __future__ import annotations
@@ -147,30 +149,88 @@ def to_weekly(daily: pd.DataFrame, today: pd.Timestamp | None = None) -> pd.Data
         observed_days=("observed", "sum"),
     ).reset_index()
     agg["complete"] = agg["days"] == 7
+    # Weeks at the edge of the forecast window with 5+ days are still usable: scale
+    # rainfall to a full week so they're comparable with training weeks.
+    agg["usable"] = agg["days"] >= 5
+    agg["rainfall_mm"] = agg["rainfall_mm"] * 7 / agg["days"]
     for col in ("rainfall_mm", "avg_temp_c", "max_temp_c", "min_temp_c", "relative_humidity_pct"):
         agg[col] = agg[col].round(2)
     return agg
 
 
-def live_frame(raw: pd.DataFrame, weekly: pd.DataFrame, through: pd.Timestamp) -> pd.DataFrame:
+def ward_weather_factors(raw: pd.DataFrame) -> pd.DataFrame:
+    """How each ward's weather relates to its city average, learned from the history.
+
+    Rain is a ratio, temperature and humidity are offsets. In the challenge data these
+    are close to neutral (rain ratio 0.99–1.01, temperature within ±0.1 °C), so city-level
+    live weather loses very little; applying them keeps live inputs consistent with training.
+    """
+    cols = ["rainfall_mm", "avg_temp_c", "max_temp_c", "min_temp_c", "relative_humidity_pct"]
+    city_mean = raw.groupby([C.CITY_COL, C.DATE_COL])[cols].transform("mean")
+    rain = (raw.groupby(C.WARD_COL)["rainfall_mm"].sum()
+            / city_mean["rainfall_mm"].groupby(raw[C.WARD_COL]).sum().replace(0, np.nan)).fillna(1.0)
+    offsets = (raw[cols[1:]] - city_mean[cols[1:]]).groupby(raw[C.WARD_COL]).mean()
+    return offsets.assign(rain_ratio=rain).rename(columns=lambda c: c if c == "rain_ratio" else f"{c}_offset")
+
+
+def live_frame(raw: pd.DataFrame, weekly: pd.DataFrame, through: pd.Timestamp, bundle=None,
+               nowcast_from: pd.Timestamp | None = None) -> pd.DataFrame:
     """Training-shaped rows for every ward, using live weather up to week ``through``.
 
-    Case counts are each ward's seasonal average for that ISO week (see module docstring).
+    * Weather: city weather adjusted to each ward with :func:`ward_weather_factors`.
+    * Case history: starts from each ward's seasonal average; with a ``bundle``, recent
+      weeks (up to ``nowcast_from``) are replaced by a **weather-driven nowcast**, the
+      model's own 2-week forecast issued from the live weather, so a wet spell raises
+      estimated recent cases the way it would have in reality.
     """
-    wk = weekly[(weekly["complete"]) & (weekly["date"] <= through)]
+    wk = weekly[(weekly["usable"]) & (weekly["date"] <= through)]
     clim = (raw.assign(woy=raw[C.DATE_COL].dt.isocalendar().week.astype(int))
                .groupby([C.WARD_COL, "woy"])[C.TARGET_COL].mean())
     wards = raw.drop_duplicates(C.WARD_COL)[[C.WARD_COL, C.CITY_COL, *C.STATIC_COLS]]
     rows = wards.merge(wk, left_on=C.CITY_COL, right_on="city", how="inner")
+
+    f = ward_weather_factors(raw).reindex(rows[C.WARD_COL])
+    rows["rainfall_mm"] = (rows["rainfall_mm"] * f["rain_ratio"].to_numpy()).clip(lower=0).round(2)
+    for col in ("avg_temp_c", "max_temp_c", "min_temp_c", "relative_humidity_pct"):
+        rows[col] = (rows[col] + f[f"{col}_offset"].to_numpy()).round(2)
+    rows["relative_humidity_pct"] = rows["relative_humidity_pct"].clip(0, 100)
+
     woy = rows["date"].dt.isocalendar().week.astype(int)
     keys = pd.MultiIndex.from_arrays([rows[C.WARD_COL], woy])
     rows[C.TARGET_COL] = np.round(clim.reindex(keys).fillna(0).to_numpy(), 2)
-    return rows[C.REQUIRED_COLS].sort_values([C.WARD_COL, C.DATE_COL]).reset_index(drop=True)
+    rows = rows[C.REQUIRED_COLS].sort_values([C.WARD_COL, C.DATE_COL]).reset_index(drop=True)
+    if bundle is not None:
+        rows = _nowcast_cases(rows, bundle, nowcast_from or through)
+    return rows
+
+
+def _nowcast_cases(rows: pd.DataFrame, bundle, until: pd.Timestamp) -> pd.DataFrame:
+    """Replace estimated case counts with the model's 2-week forecast, week by week."""
+    from .features import FEATURE_COLS, build_features
+
+    rows = rows.copy()
+    weeks = sorted(rows[C.DATE_COL].unique())
+    first_issue = pd.Timestamp(weeks[min(8, len(weeks) - 1)])  # lags need 8 weeks of history
+    for target in weeks:
+        if target > until:
+            break
+        issue = pd.Timestamp(target) - pd.Timedelta(weeks=2)
+        if issue < first_issue:
+            continue
+        feats = build_features(rows, bundle.city_categories)
+        at = feats[(feats[C.DATE_COL] == issue)].dropna(subset=FEATURE_COLS)
+        if at.empty:
+            continue  # not enough history yet: keep the seasonal-average estimate
+        pred = bundle.predict(at, 2)["expected_cases"].to_numpy()
+        est = dict(zip(at[C.WARD_COL], pred))
+        m = rows[C.DATE_COL] == target
+        rows.loc[m, C.TARGET_COL] = rows.loc[m, C.WARD_COL].map(est).fillna(rows.loc[m, C.TARGET_COL]).round(2)
+    return rows
 
 
 def issue_weeks(weekly: pd.DataFrame) -> tuple[pd.Timestamp, pd.Timestamp]:
-    """(last fully observed week, last complete week including forecast days)."""
+    """(last fully observed week, last usable week including forecast days)."""
     complete = weekly[weekly["complete"]]
     observed = complete[complete["observed_days"] == 7]["date"].max()
-    with_forecast = complete["date"].max()
+    with_forecast = weekly[weekly["usable"]]["date"].max()
     return pd.Timestamp(observed), pd.Timestamp(with_forecast)

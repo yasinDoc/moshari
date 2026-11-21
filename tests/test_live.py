@@ -70,3 +70,22 @@ def test_live_frame_feeds_the_model(tmp_path):
     feats = build_features(fr)
     row = feats[feats["date"] == obs].dropna(subset=FEATURE_COLS)
     assert len(row) == raw[raw.city.isin(CITIES)]["ward_id"].nunique()
+
+
+def test_nowcast_replaces_recent_case_estimates(tmp_path):
+    from moshari.model import ForecastBundle
+
+    daily, _ = live.fetch_daily(tmp_path, opener=FakeOpener(), cities=CITIES)
+    w = live.to_weekly(daily, today=pd.Timestamp("2026-11-22"))
+    obs, last = live.issue_weeks(w)
+    raw = load_dataset()
+    plain = live.live_frame(raw, w, last)
+    nowcast = live.live_frame(raw, w, last, ForecastBundle.load(), nowcast_from=obs)
+    recent = plain["date"] >= obs - pd.Timedelta(weeks=2)
+    assert not plain.loc[recent, "dengue_cases"].equals(nowcast.loc[recent, "dengue_cases"])
+    assert nowcast["dengue_cases"].ge(0).all()
+
+
+def test_ward_weather_factors_are_near_neutral():
+    f = live.ward_weather_factors(load_dataset())
+    assert f["rain_ratio"].between(0.9, 1.1).all()

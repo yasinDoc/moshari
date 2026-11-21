@@ -73,3 +73,23 @@ def test_alert_policy_metrics_trade_recall_for_precision():
     up = exp + 3
     m = alert_policy_metrics(y, exp, up, [2.0, 7.0, 13.0])
     assert m["Cautious"]["recall"] >= m["Standard"]["recall"]
+
+
+def test_probabilities_are_valid_and_ordered(svc):
+    fc = svc.forecast_all(svc.default_issue_date(), 3)
+    assert fc["p_high"].between(0, 1).all() and fc["p_crit"].between(0, 1).all()
+    assert (fc["p_crit"] <= fc["p_high"] + 1e-9).all()  # Critical implies High
+    # wards with more expected cases should, on average, be likelier to reach High
+    top, bottom = fc.nlargest(10, "expected_cases"), fc.nsmallest(10, "expected_cases")
+    assert top["p_high"].mean() > bottom["p_high"].mean()
+
+
+def test_forecast_assisted_model_uses_future_rain(svc, raw):
+    from moshari.service import ForecastService
+
+    fsvc = ForecastService(raw, svc.bundle, use_forecast=True)
+    d = svc.default_issue_date()
+    base = svc.forecast_all(d, 4)
+    with_fc = fsvc.forecast_all(d, 4)
+    assert with_fc["used_forecast"].all() and not base["used_forecast"].any()
+    assert not with_fc.set_index("ward_id")["expected_cases"].equals(base.set_index("ward_id")["expected_cases"])

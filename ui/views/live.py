@@ -39,10 +39,11 @@ with top_l:
         "Real weather from Open-Meteo, run through the same trained model",
         [("cloud", "Weather", src), ("update", "Updated", age)],
     )
-mode = top_r.segmented_control(
-    "Weather used", ["Observed", "With 14-day forecast"], default="Observed", key="live_mode", width="stretch")
-issue = fc_week if mode == "With 14-day forecast" else obs_week
-lsvc = state.live_service(info["fetched_at"], issue)
+use_fc = top_r.toggle("Use the 14-day rain forecast", value=True, key="live_use_fc",
+                       help="Rain falling in the next two weeks drives cases 3 to 4 weeks out. "
+                            "With a realistic forecast, 4-week errors drop about 9% in testing.")
+issue = obs_week
+lsvc = state.live_service(info["fetched_at"], obs_week, fc_week, bool(use_fc))
 fc = lsvc.forecast_all(issue, horizon, list(cities) or None, policy)
 target = issue + pd.Timedelta(weeks=horizon)
 
@@ -110,8 +111,12 @@ with left:
              "Reopening the page or switching settings costs no further calls"),
             ("wifi_off", "Works offline",
              "If the network drops, the last good response is used and labelled"),
-            ("info", "Case history is estimated",
-             "Live case reports aren't connected yet, so each ward's recent cases use its seasonal average"),
+            ("query_stats", "Case history is nowcast",
+             "Live case reports aren't connected yet, so recent cases come from the model's own 2-week "
+             "forecasts run on the live weather"),
+            ("grid_on", "Ward-level weather",
+             "City weather is adjusted to each ward using its history; in this data wards differ from "
+             "their city by about 1% in rain, so little is lost"),
         ]
         st.html('<div class="m-list">' + "".join(
             f'<div class="m-row"><div class="n">{theme.icon(i)}</div><div><div class="w">{t}</div>'
