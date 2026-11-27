@@ -1,14 +1,45 @@
 <p align="center">
-  <img src="assets/logo.svg" width="88" alt="Moshari logo: a mosquito net with a mosquito kept outside">
+  <img src="assets/logo.svg" width="96" alt="Moshari logo: a mosquito net with a mosquito kept outside">
 </p>
 
 <h1 align="center">Moshari (মশারি)</h1>
 
-<p align="center"><b>Ward-level dengue early warning for Dhaka, Chattogram, Gazipur and Narayanganj.</b></p>
+<p align="center"><b>Ward-level dengue early warning, from forecast to saline, beds, crews and a message, before dengue reaches the hospital.</b><br>
+60 wards · Dhaka North and South, Chattogram, Gazipur, Narayanganj · English and বাংলা · works offline</p>
+
+<p align="center">
+  <a href="https://github.com/yasinDoc/moshari/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/yasinDoc/moshari/actions/workflows/ci.yml/badge.svg"></a>
+  <img alt="Tests: 1400 passing" src="https://img.shields.io/badge/tests-1400%20passing-0E7369">
+  <img alt="Offline: 11 of 11 pages" src="https://img.shields.io/badge/offline-11%2F11%20pages-0E7369">
+  <img alt="Python 3.10+" src="https://img.shields.io/badge/python-3.10%2B-3776AB">
+  <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-62666C"></a>
+</p>
+
+<p align="center">
+  <a href="https://moshari-sa5dxzxydg98ej4umhvbst.streamlit.app/"><b>Live app</b></a> ·
+  <a href="#a-tour-in-screenshots"><b>Screenshots</b></a> ·
+  <a href="docs/video_script.md"><b>7-minute demo script</b></a> ·
+  <a href="ARCHITECTURE.md"><b>Architecture</b></a> ·
+  <a href="docs/qa_prep.md"><b>Q&amp;A</b></a> ·
+  <a href="#run-it-locally"><b>Run it locally</b></a>
+</p>
+
+<p align="center">
+  <img src="docs/img/overview.png" width="920" alt="Overview: a red supply alert line, four stat tiles and all 60 wards as tiles coloured by forecast risk">
+</p>
 
 *Moshari* is Bangla for mosquito net. A net protects one family. Moshari helps protect whole wards by forecasting dengue cases **2 to 4 weeks ahead** from weather. That gives city corporations time to send larvicide and fogging teams *before* hospital admissions climb.
 
 Phase 2 turns the forecast into operations: how many saline bags, test kits, beds and spraying crews each ward gets when stock is short, where overflow patients go within their own city, how many cases extra crews would prevent, and the SMS, WhatsApp and printed notices that tell officers what to do. A Weekly briefing turns all of it into one decision on one page, a Ward map shows the risk on real ward outlines, and the whole dashboard, its notices and its PDFs switch between English and Bangla. It all works with the internet off.
+
+| Phase 2 module | Where | In one line |
+|---|---|---|
+| 1. Resource allocation | **Resources** | Fitted demand per case, risk × density priority, scarce stock filled top-down, crews to High and Critical wards |
+| 2. Hospital overflow routing | **Hospital beds** | Capacity from each ward's own history; overflow moves to the least-loaded ward in the same city; the rest shown in red |
+| 3. Vector control simulator | **Simulator** | Crews cut the breeding signal and monotone models re-run the forecast: cases, beds and saline saved, ROI per crew |
+| 4. Dispatch notices | **Dispatch** | One-segment SMS, WhatsApp and a printable brief per ward, in English or Bangla; batch zip; samples in `exports/` |
+| 5. Offline resilience | Sidebar switch | Every page runs with the internet cut off; only Live outlook ever calls an API, and it falls back to saved weather |
+| All five as one decision | **Weekly briefing** | Four sentences and a one-page PDF for the city health officer |
 
 ## Results at a glance
 
@@ -44,9 +75,7 @@ Phase 2, on the demo week (forecast issued 2 June 2025, 3 weeks ahead):
 
 **Demo video, round one (3 min):** https://youtu.be/tghizcy3_V8. The 7-minute final-round video follows [docs/video_script.md](docs/video_script.md).
 
-[![Watch the Moshari demo on YouTube](https://img.youtube.com/vi/tghizcy3_V8/hqdefault.jpg)](https://youtu.be/tghizcy3_V8)
-
-![Ward overview: all 60 wards as tiles in a net, coloured by forecast risk](docs/img/ward-net.png)
+[![Watch the round-one Moshari demo on YouTube](https://img.youtube.com/vi/tghizcy3_V8/hqdefault.jpg)](https://youtu.be/tghizcy3_V8)
 
 ## Run it locally
 
@@ -128,9 +157,62 @@ The sidebar follows an officer's working order: see the risk, allocate supplies,
 
 **English or বাংলা.** The **ভাষা / Language** switch at the top of the sidebar turns every page into Bangla: headings, tables, charts, hover labels and tips, with Bangla digits and month names (২৩ জুন ২০২৫) and ward names such as "DNCC ওয়ার্ড ১২". English is the default and reads exactly as before. The choice stays while you move between pages, and a link with `?lang=bn` opens the dashboard in Bangla. The Dispatch notices start in the same language (you can still pick the other one there). Codes (DNCC, W12), product names and CSV/ZIP downloads stay as they are. The texts live in one file, `src/moshari/locales/bn.json`, so a Bangla reader can correct a wording without touching code. A few things Streamlit draws itself (the file uploader's own text, the table toolbar, the digits on sliders and number boxes) stay in English. The Weekly briefing PDF follows the switch too: in Bangla it is drawn with the bundled Noto Sans Bengali font (`src/moshari/fonts/`, SIL Open Font License) and `uharfbuzz`, so joined letters print correctly, while the English PDF is unchanged.
 
-![Ward forecast: outlook, rain-to-cases chart and drivers](docs/img/ward-forecast.png)
+## A tour in screenshots
 
-![Live outlook: real Open-Meteo weather for five cities, run through the model](docs/img/live.png)
+One health officer's week, in the order of the sidebar. Every shot is the real app, forecast issued 2 June 2025 for 3 weeks ahead unless noted, and the numbers match the [demo script](docs/video_script.md).
+
+<table>
+<tr>
+<td width="50%" valign="top">
+<img src="docs/img/ward-map.png" alt="Ward map: wards coloured by risk on real ward outlines"><br>
+<b>Ward map.</b> The same risk on real ward outlines, bundled with the app (no map tiles, works offline). Positions are illustrative, and the page says so.
+</td>
+<td width="50%" valign="top">
+<img src="docs/img/resources.png" alt="Resources: 70% stock, 25 wards in deficit, none High or Critical"><br>
+<b>1. Resources.</b> At 70% stock the 35 highest-priority wards get everything; 25 come up short and <i>none</i> of them is High risk. 52 crews needed, 40 assigned.
+</td>
+</tr>
+<tr>
+<td width="50%" valign="top">
+<img src="docs/img/hospital.png" alt="Hospital beds on 7 Aug 2023: 2 patients moved, 5 still short"><br>
+<b>2. Hospital beds</b> (issued 7 Aug 2023). Capacity is each ward's own 90th-percentile bed demand. Two patients move within their city; five still need a bed, in red.
+</td>
+<td width="50%" valign="top">
+<img src="docs/img/simulator.png" alt="Simulator: 30 crews prevent 220 cases over weeks 2 to 4"><br>
+<b>3. Simulator.</b> 30 crews prevent about 220 cases over weeks 2 to 4 (−30, −48, −142). A monotone model means a crew can never raise a forecast.
+</td>
+</tr>
+<tr>
+<td width="50%" valign="top">
+<img src="docs/img/dispatch.png" alt="Dispatch: 26 notices ready and the SMS for DSCC Ward 04"><br>
+<b>4. Dispatch.</b> 26 High wards, each with a one-segment SMS, a WhatsApp message and a printable brief. Download one, a zip, or one printable file.
+</td>
+<td width="50%" valign="top">
+<img src="docs/img/dispatch-bn.png" alt="Dispatch in Bangla: the whole dashboard and the SMS in Bangla"><br>
+<b>বাংলা.</b> One switch turns every page, notice and PDF into Bangla. Bangla SMS are Unicode, so they are held to two parts, and shortages are never cut.
+</td>
+</tr>
+<tr>
+<td width="50%" valign="top">
+<img src="docs/img/briefing.png" alt="Weekly briefing: the four-sentence decision and the PDF button"><br>
+<b>Weekly briefing.</b> All five modules as one decision: 26 wards High, approve 12 crews, release 296 saline bags and 148 test kits, no transfers. One-page PDF.
+</td>
+<td width="50%" valign="top">
+<img src="docs/img/ward-forecast.png" alt="Ward forecast for DNCC Ward 12: High risk, outlook and drivers"><br>
+<b>Ward forecast.</b> One ward's 2-, 3- and 4-week outlook with an 80% range, the chance of High and Critical, the drivers behind it, and what-if sliders.
+</td>
+</tr>
+<tr>
+<td width="50%" valign="top">
+<img src="docs/img/accuracy.png" alt="Model accuracy: MAE 1.03, 17% better than baselines"><br>
+<b>Model accuracy.</b> Tested on 2024–25, never seen in training: 1.03 cases off per ward per week, 17% better than the best simple rule, 83% in the right tier.
+</td>
+<td width="50%" valign="top">
+<img src="docs/img/live.png" alt="Live outlook: real Open-Meteo rainfall for five cities"><br>
+<b>Live outlook.</b> Today's real Open-Meteo weather for all five cities in one cached request, run through the same model. The only page that uses the internet.
+</td>
+</tr>
+</table>
 
 ## REST API
 
