@@ -123,6 +123,30 @@ uvicorn moshari.api:app --app-dir src --port 8000   # interactive docs at http:/
 | `POST /scenario` | What-if forecast with adjusted rain, temperature or humidity |
 | `GET /health`, `GET /wards` | Model version, thresholds, ward profiles |
 
+## Exports: ready-to-send dispatch notices
+
+[`exports/`](exports/) holds sample notices for the demo week (forecast issued 2 June 2025, for the week of 23 June): one SMS, one WhatsApp message and one printable commissioner brief for each of the 26 High-risk wards, plus PDF briefs. [`exports/README.md`](exports/README.md) lists every ward and the settings used.
+
+Regenerate the folder (works offline, about 10 seconds):
+
+```bash
+pip install reportlab                 # PDF briefs only; also in requirements-dev.txt
+python scripts/export_dispatch.py     # same settings as the Dispatch page defaults
+```
+
+| Option | Default | Meaning |
+|---|---|---|
+| `--issue YYYY-MM-DD` | app default week | Forecast issue week |
+| `--horizon 2/3/4` | 3 | Weeks ahead |
+| `--stock 30-100` | 70 | Available stock, % of demand |
+| `--crews N` | 40 | Total spraying crews |
+| `--select high/deficit/all` | high | High and Critical wards, wards short of anything, or every ward |
+| `--pdf top/all/none` | top | PDF of the top-priority ward plus `all_briefs.pdf`, a PDF for every ward, or none |
+| `--out DIR` | `exports/` | Output folder |
+| `--require-pdf` | off | Fail instead of warning when reportlab is missing |
+
+Output: `sms/<ward>.txt` (160 characters or fewer), `whatsapp/<ward>.txt`, `briefs/<ward>.html` and `briefs/all_briefs.html` (open and press *Print / Save as PDF*), and `briefs/*.pdf` (A4, one page per ward). The text comes from the same templates as the Dispatch page, the files are rebuilt in full each run (wards that drop out are removed), and the same settings always give identical files.
+
 ## How it works
 
 1. **Validate** the weekly ward file: schema, plausible ranges, duplicates and gaps between weeks ([`data.py`](src/moshari/data.py)).
