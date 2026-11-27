@@ -35,6 +35,7 @@ MONTHS_BN = ("জানুয়ারি", "ফেব্রুয়ারি",
 TIER_BN = {"Low": "নিম্ন", "Medium": "মাঝারি", "High": "উচ্চ", "Critical": "সংকটজনক"}
 _WARD_LABEL = re.compile(r"^(DNCC|DSCC|CCC|GCC|NCC) Ward (\d+)$")
 _BENGALI = re.compile(r"[\u0980-\u09FF]")
+_IDENTIFIER = re.compile(r"^[a-z0-9]+(?:_[a-z0-9]+)+$")
 _NUMBER_ONLY = re.compile(r"^[\s\d.,%+\-−–:/()×~<>≥≤→]*$")
 
 
@@ -132,7 +133,7 @@ def tr(text: Any, lang: str = "en") -> str:
     s = str(text)
     if norm(lang) != "bn":
         return s
-    if _BENGALI.search(s):                      # already Bangla (translated earlier)
+    if _BENGALI.search(s) or _IDENTIFIER.match(s):   # already Bangla, or a column name such as ward_id
         return s
     m = _WARD_LABEL.match(s)
     if m:
