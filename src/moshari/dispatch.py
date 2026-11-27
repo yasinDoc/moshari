@@ -22,6 +22,7 @@ from __future__ import annotations
 import html
 import io
 import math
+import sys
 import zipfile
 from typing import Any, Iterable, Mapping
 
@@ -561,17 +562,32 @@ def select_rows(table: pd.DataFrame, mode: str = "high", wards: Iterable[str] | 
     return table[mask]
 
 
-def export_zip(rows: Iterable[Mapping[str, Any]], sender: str = SENDER) -> bytes:
+LANGUAGES = {"en": "English", "bn": "বাংলা"}
+
+
+def templates(lang: str = "en"):
+    """The module with ``sms``, ``whatsapp``, ``brief_html`` and ``briefs_html`` for ``lang``."""
+    if lang == "bn":
+        from . import dispatch_bn
+
+        return dispatch_bn
+    if lang != "en":
+        raise ValueError(f"unknown language {lang!r}; use one of {sorted(LANGUAGES)}")
+    return sys.modules[__name__]
+
+
+def export_zip(rows: Iterable[Mapping[str, Any]], sender: str = SENDER, lang: str = "en") -> bytes:
     """A zip with ``sms/<ward>.txt``, ``whatsapp/<ward>.txt``, ``briefs/<ward>.html`` and
-    ``briefs/all_briefs.html`` (the same layout as the ``exports/`` folder)."""
+    ``briefs/all_briefs.html`` (the same layout as the ``exports/`` folder), in ``lang``."""
     rows = list(rows)
+    t = templates(lang)
     buf = io.BytesIO()
     with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as z:
         for r in rows:
             w = str(_get(r, C.WARD_COL, "ward"))
-            z.writestr(f"sms/{w}.txt", sms(r, sender) + "\n")
-            z.writestr(f"whatsapp/{w}.txt", whatsapp(r, sender) + "\n")
-            z.writestr(f"briefs/{w}.html", brief_html(r, sender))
+            z.writestr(f"sms/{w}.txt", t.sms(r, sender) + "\n")
+            z.writestr(f"whatsapp/{w}.txt", t.whatsapp(r, sender) + "\n")
+            z.writestr(f"briefs/{w}.html", t.brief_html(r, sender))
         if rows:
-            z.writestr("briefs/all_briefs.html", briefs_html(rows, sender))
+            z.writestr("briefs/all_briefs.html", t.briefs_html(rows, sender))
     return buf.getvalue()

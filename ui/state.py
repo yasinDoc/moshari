@@ -91,6 +91,18 @@ def fmt_short(d) -> str:
     return pd.Timestamp(d).strftime("%d %b")
 
 
+@st.cache_data(show_spinner=False, max_entries=16)
+def quick_weeks(key: str, horizon: int) -> dict[str, pd.Timestamp]:
+    """Shortcut issue weeks: early season (the default), the forecast peak, and the newest week."""
+    svc = service()
+    return {"Early": svc.default_issue_date(), "Peak": svc.peak_issue_date(horizon),
+            "Latest": svc.latest_issue_date()}
+
+
+def _jump_to(week: pd.Timestamp) -> None:
+    st.session_state["issue_date"] = week
+
+
 def settings() -> tuple[pd.Timestamp, int, tuple[str, ...]]:
     """Render the forecast settings panel (inside the sidebar) and return its values."""
     svc = service()
@@ -111,6 +123,16 @@ def settings() -> tuple[pd.Timestamp, int, tuple[str, ...]]:
             format_func=fmt_week,
             help="Moshari only uses data up to this week, as a health officer would on that Monday.",
         )
+        quick = quick_weeks(data_key(), int(st.session_state.get("horizon") or 3))
+        tips = {"Early": "Early season, a few weeks before the latest peak: the moment an early warning matters.",
+                "Peak": "The week of the latest season with the heaviest forecast, so every module has "
+                        "shortages, crews and overflow to show.",
+                "Latest": "The newest week in the data."}
+        with st.container(key="quick-weeks", horizontal=True, gap="small"):
+            for label, week in quick.items():
+                st.button(label, key=f"jump_{label}", on_click=_jump_to, args=(week,), width="stretch",
+                          type="primary" if st.session_state.get("issue_date") == week else "secondary",
+                          help=f"{tips[label]} Jumps to {fmt_week(week)}.")
         st.segmented_control(
             "Weeks ahead",
             options=svc.bundle.horizons,

@@ -171,8 +171,8 @@ with left:
         theme.card_title("Transfers", "Each overflow ward fills the least loaded ward first, then the nearest by "
                          "ward number.", _plural(len(show_t), "move"))
         if show_t.empty:
-            msg = (f"No ward{where} needs more beds than it has this week. To see routing at work, set "
-                   "Forecast issued to a peak-season week such as 07 Aug 2023." if short.empty else
+            msg = (f"No ward{where} needs more beds than it has this week. Click Peak in the sidebar, or pick "
+                   "a busy week such as 07 Aug 2023, to see routing under pressure." if short.empty else
                    f"No transfers are possible{where}: there are no spare beds left to move patients to.")
             st.html(f'<p class="m-note">{msg}</p>')
         else:

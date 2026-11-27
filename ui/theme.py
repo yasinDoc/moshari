@@ -112,6 +112,15 @@ p, li { color:var(--ink-2); }
 
 .st-key-settings { background:var(--base); border-radius:var(--r-md); box-shadow:var(--press); padding:var(--s4) var(--s4) var(--s3); }
 .st-key-settings [data-testid="stVerticalBlock"] { gap:var(--s4) !important; }
+.st-key-quick-weeks { margin-top:calc(-1 * var(--s2)); }
+.st-key-quick-weeks [data-testid="stTooltipIcon"], .st-key-quick-weeks .stTooltipHoverTarget { display:block !important; width:100%; }
+.st-key-quick-weeks .stButton button { width:100%; }
+.st-key-quick-weeks .stButton button { min-height:30px !important; padding:0 6px !important; font-size:12px !important;
+  background:var(--base) !important; box-shadow:var(--raise-xs) !important; }
+.st-key-quick-weeks .stButton button p { font-size:12px !important; font-weight:700; color:var(--ink-2) !important; white-space:nowrap; }
+.st-key-quick-weeks .stElementContainer { flex:1 1 0 !important; width:auto !important; min-width:0; }
+.st-key-quick-weeks .stButton button[data-testid="stBaseButton-primary"], .st-key-quick-weeks .stButton button:hover { background:var(--base) !important; box-shadow:var(--press-sm) !important; }
+.st-key-quick-weeks .stButton button[data-testid="stBaseButton-primary"] p { color:var(--accent) !important; }
 .m-status { margin-top:var(--s5); padding:var(--s3) var(--s4); border-radius:var(--r-md); box-shadow:var(--raise-sm); background:var(--base); }
 .m-status .r { display:flex; align-items:center; gap:var(--s2); font-size:13px; font-weight:700; color:var(--ink); }
 .m-status .r .live { width:8px; height:8px; border-radius:50%; background:#2FA36B; box-shadow:0 0 0 3px rgba(47,163,107,.18); }
