@@ -12,13 +12,13 @@ V2 = `python .claude/goals/bangla-pdf-verify.py`, V1 = `python .claude/goals/ban
 4. English PDF unchanged - proof: `V2 en` prints "PASS en"
 5. New tests real, pass - proof: `V2 tests && python -m pytest tests/test_briefing_pdf_bn.py -o addopts="" -q` prints "PASS tests" and "N passed in", N >= 8
 6. Screens still right - proof: `V1 en && V1 bn && V1 switch` print the three PASS lines
-7. Full suite passes - proof: `python -m pytest -o addopts="" -q` last line; `--co` count >= __TESTS__
-8. Committed in scope - proof: `V2 git` prints "PASS git", then `git diff --stat __BASE__..HEAD`
-With V2 outputs print `sha256sum .claude/goals/bangla-pdf-verify.py`, which must be __VERIFY_SHA__.
+7. Full suite passes - proof: `python -m pytest -o addopts="" -q` last line; `--co` count >= 1389
+8. Committed in scope - proof: `V2 git` prints "PASS git", then `git diff --stat 5c533fb..HEAD`
+With V2 outputs print `sha256sum .claude/goals/bangla-pdf-verify.py`, which must be 97659ab5d7ac01f25ff21a1284d313113e4a37f2ab8d639bcd5e4309f4263dde.
 
 SCOPE: the files in the design's Components: two TTFs and OFL.txt in src/moshari/fonts/, one uharfbuzz line in requirements.txt, src/moshari/briefing.py, briefing_pdf.py, i18n.py, locales/bn.json, ui/views/briefing.py, ui/i18n.py, new tests/test_briefing_pdf_bn.py, README.md. Nothing else.
 
-CONSTRAINTS: the approach is the one in .claude/goals/bangla-pdf-design.md; the order of its steps is guidance. Fonts are the official Google Fonts files with the pinned hashes. Bangla PDF has the same paragraphs as the English one. Test count must stay >= __TESTS__. Commit with `git -c user.name=Ananya -c user.email=297095755+sam21-og@users.noreply.github.com commit`, messages starting "version-onsite-final:". Forbidden: editing existing tests; skips/xfail; swallowed errors; network calls in code; dependencies other than uharfbuzz; touching exports/ or scripts/; images of text; modifying any file in .claude/goals/ except the checklist.
+CONSTRAINTS: the approach is the one in .claude/goals/bangla-pdf-design.md; the order of its steps is guidance. Fonts are the official Google Fonts files with the pinned hashes. Bangla PDF has the same paragraphs as the English one. Test count must stay >= 1389. Commit with `git -c user.name=Ananya -c user.email=297095755+sam21-og@users.noreply.github.com commit`, messages starting "version-onsite-final:". Forbidden: editing existing tests; skips/xfail; swallowed errors; network calls in code; dependencies other than uharfbuzz; touching exports/ or scripts/; images of text; modifying any file in .claude/goals/ except the checklist.
 
 EXTERNAL EFFECTS: no push or PR; network only for pip and the two font downloads and OFL.txt named in the design.
 

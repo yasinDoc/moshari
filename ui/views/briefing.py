@@ -24,15 +24,16 @@ RED = theme.TIER_COLORS["Critical"]
 
 @st.cache_data(show_spinner=T("Preparing the briefing…"), max_entries=64)
 def make(key: str, issue_date, horizon: int, cities: tuple, policy: str,
-         stock_pct: float, crews: int, surge_pct: int, lang: str = "en") -> tuple[dict, bytes]:
-    """The briefing for these settings and its PDF (cached per scenario and language).
+         stock_pct: float, crews: int, surge_pct: int, lang: str = "en") -> dict:
+    """The briefing for these settings (cached per scenario and language)."""
+    return B.build(state.service(), issue_date, horizon, cities, policy, stock_pct, crews, surge_pct, lang=lang)
 
-    The on-screen sentences follow ``lang``; the PDF is still the English one.
-    """
-    brief = B.build(state.service(), issue_date, horizon, cities, policy, stock_pct, crews, surge_pct, lang=lang)
-    pdf_brief = brief if lang == "en" else B.build(state.service(), issue_date, horizon, cities, policy,
-                                                   stock_pct, crews, surge_pct)
-    return brief, briefing_pdf(pdf_brief)
+
+@st.cache_data(show_spinner=False, max_entries=64)
+def make_pdf(key: str, issue_date, horizon: int, cities: tuple, policy: str,
+             stock_pct: float, crews: int, surge_pct: int, lang: str = "en") -> bytes:
+    """The one-page PDF of that briefing, in the same language (``lang`` is part of the cache key)."""
+    return briefing_pdf(make(key, issue_date, horizon, cities, policy, stock_pct, crews, surge_pct, lang), lang=lang)
 
 
 theme.header(
@@ -52,7 +53,13 @@ with st.container(key="card-brief-controls"):
     surge = c3.slider(T("Surge beds per ward"), 0, 100, 0, 10, format="+%d%%", key="brief_surge",
                       help=T("Extra corridor or field beds opened in every ward."))
 
-brief, pdf = make(key, issue_date, horizon, cities, policy, stock / 100, int(crews), int(surge), LANG)
+scenario = (key, issue_date, horizon, cities, policy, stock / 100, int(crews), int(surge))
+brief = make(*scenario, LANG)
+try:
+    pdf = make_pdf(*scenario, LANG)
+except RuntimeError as err:   # Bangla PDF on an install without uharfbuzz: say so, offer the English PDF
+    st.error(T("The Bangla PDF could not be made, so the button gives the English PDF instead.") + f" {err}")
+    pdf = make_pdf(*scenario, "en")
 
 theme.gap()
 

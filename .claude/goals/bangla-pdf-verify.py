@@ -22,7 +22,7 @@ import sys
 from pathlib import Path
 
 ROOT = Path.cwd()
-BASE = "__BASE__"            # the commit goal 1 ended on; goal 2's diff is measured from it
+BASE = "5c533fb"            # the commit goal 1 ended on; goal 2's diff is measured from it
 NEW_TEST = "tests/test_briefing_pdf_bn.py"
 MIN_NEW_TESTS = 8
 FONT_DIR = ROOT / "src" / "moshari" / "fonts"

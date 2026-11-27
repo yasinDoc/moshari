@@ -9,16 +9,20 @@ PDF says exactly what the Weekly briefing page says. Layout, top to bottom:
 Long content is shrunk to fit, never split onto a second page. Output is deterministic
 (``invariant=1``) and page streams are left uncompressed (``pageCompression=0``), like the
 commissioner briefs in :mod:`moshari.dispatch_pdf`. reportlab is imported only inside
-:func:`briefing_pdf`; fonts are the built-in Helvetica, so it works offline.
+:func:`briefing_pdf`. English uses the built-in Helvetica; Bangla (``lang="bn"``) uses the bundled
+Noto Sans Bengali (``fonts/``, SIL Open Font License) and ``uharfbuzz`` to join the letters. Both
+work offline. Every text goes through :func:`moshari.i18n.t`, so English is unchanged.
 """
 
 from __future__ import annotations
 
 import html
+import importlib.util
 from io import BytesIO
+from pathlib import Path
 from typing import Any, Mapping
 
-from .data import ward_label
+from . import i18n as I
 
 INK, MUTED, LINE, ACCENT, BAD, OK = "#1d2433", "#5d6678", "#d9dee8", "#2f6f8f", "#8F1D30", "#256E4A"
 DECISION_BG, ALERT_BG, FINE_BG = "#eef4f7", "#fbeef0", "#eef7f1"
@@ -26,17 +30,49 @@ TIER_INK = {"Low": "#256E4A", "Medium": "#8a6500", "High": "#b45309", "Critical"
 
 MAX_TRANSFERS = 8
 FOOTER = "Made offline by Moshari. Forecasts are estimates; confirm with ward surveillance."
+FONT_DIR = Path(__file__).resolve().parent / "fonts"
+BN_FONT, BN_BOLD = "NotoSansBengali", "NotoSansBengali-Bold"
+BN_FILES = {BN_FONT: "NotoSansBengali-Regular.ttf", BN_BOLD: "NotoSansBengali-Bold.ttf"}
+
+
+def _register_bangla() -> None:
+    """Register the bundled Bangla font once; reportlab shapes it with uharfbuzz."""
+    if importlib.util.find_spec("uharfbuzz") is None:   # reportlab shapes with it when a style has shaping=1
+        raise RuntimeError("Bangla PDF needs uharfbuzz: pip install -r requirements.txt")
+    from reportlab.lib.fonts import addMapping
+    from reportlab.pdfbase import pdfmetrics
+    from reportlab.pdfbase.ttfonts import TTFont
+
+    registered = set(pdfmetrics.getRegisteredFontNames())
+    for name, file in BN_FILES.items():
+        if name in registered:
+            continue
+        path = FONT_DIR / file
+        if not path.exists():
+            raise FileNotFoundError(f"Bangla font missing: {path}")
+        pdfmetrics.registerFont(TTFont(name, str(path)))
+    # <b> inside a Bangla paragraph picks the bold file
+    addMapping(BN_FONT, 0, 0, BN_FONT)
+    addMapping(BN_FONT, 1, 0, BN_BOLD)
+    addMapping(BN_FONT, 0, 1, BN_FONT)
+    addMapping(BN_FONT, 1, 1, BN_BOLD)
 
 
 def _e(text: Any) -> str:
     return html.escape(str(text), quote=False)
 
 
-def _styles():
+def _styles(lang: str = "en"):
     from reportlab.lib.colors import HexColor
     from reportlab.lib.styles import ParagraphStyle
 
+    bangla = lang == "bn"
+    fonts = {"Helvetica": BN_FONT, "Helvetica-Bold": BN_BOLD}
+
     def ps(name, size, lead=None, color=INK, font="Helvetica", **kw):
+        if bangla:
+            kw["shaping"] = 1
+            font = fonts[font]
         return ParagraphStyle(name, fontName=font, fontSize=size, leading=lead or size * 1.3,
                               textColor=HexColor(color), **kw)
 
@@ -76,26 +112,36 @@ def _table(rows: list[list], widths: list[float], header: bool = True):
     return t
 
 
-def _story(b: Mapping[str, Any], width: float, s: dict) -> list:
+def _story(b: Mapping[str, Any], width: float, s: dict, lang: str = "en") -> list:
     from reportlab.lib.colors import HexColor
     from reportlab.platypus import Paragraph as P
     from reportlab.platypus import Spacer, Table, TableStyle
 
+    def L(text: str, **kw: Any) -> str:      # English returns text.format(**kw): same as before
+        return I.t(text, lang, **kw)
+
+    def N(x: Any, spec: str = "") -> str:     # a number, with Bangla digits in Bangla
+        return I.num(x, spec, lang)
+
+    def W(ward_id: str) -> str:
+        return I.ward(ward_id, lang)
+
     out: list = []
     week = b["target_week"]
     cities = b.get("cities") or []
-    where = "All five city corporations" if len(cities) >= 5 else ", ".join(cities)
-    out += [P("Dengue response · city health officer", s["kicker"]),
-            P("Weekly briefing", s["title"]),
-            P(_e(f"Week of {week:%d %B %Y} · forecast issued {b['issue_date']:%d %b %Y}, "
-                 f"{b['horizon']} weeks ahead · {where}"), s["sub"]),
-            P(_e(f"Scenario: {b['stock_pct']:.0%} of regional stock, {b['crews']} spraying crews, "
-                 f"+{b['surge_pct']:.0f}% surge beds"), s["sub"]),
+    where = L("All five city corporations") if len(cities) >= 5 else ", ".join(I.tr(c, lang) for c in cities)
+    out += [P(L("Dengue response · city health officer"), s["kicker"]),
+            P(L("Weekly briefing"), s["title"]),
+            P(_e(L("Week of {week} · forecast issued {issued}, {h} weeks ahead · {where}",
+                   week=I.date_fmt(week, "%d %B %Y", lang), issued=I.date_fmt(b["issue_date"], "%d %b %Y", lang),
+                   h=b["horizon"], where=where)), s["sub"]),
+            P(_e(L("Scenario: {stock:.0%} of regional stock, {crews} spraying crews, +{surge:.0f}% surge beds",
+                   stock=b["stock_pct"], crews=b["crews"], surge=b["surge_pct"])), s["sub"]),
             Spacer(1, 8)]
 
     # Decision box: the four sentences, numbered.
-    dec = [[P("DECISION", s["dlabel"])]] + [[P(_e(f"{i}. {line}"), s["decision"])]
-                                          for i, line in enumerate(b["decision"], 1)]
+    dec = [[P(L("DECISION"), s["dlabel"])]] + [[P(_e(f"{N(i)}. {line}"), s["decision"])]
+                                             for i, line in enumerate(b["decision"], 1)]
     box = Table(dec, colWidths=[width])
     box.setStyle(TableStyle([("BACKGROUND", (0, 0), (-1, -1), HexColor(DECISION_BG)),
                              ("LINEBEFORE", (0, 0), (0, -1), 3, HexColor(ACCENT)),
@@ -106,11 +152,12 @@ def _story(b: Mapping[str, Any], width: float, s: dict) -> list:
 
     # KPI row.
     short = b["deficit_wards"]
-    kpis = [("HIGH-RISK WARDS", f"{b['high_wards']} / {b['wards']}", f"{b['critical_wards']} critical",
-             b["high_wards"] > 0),
-            ("WARDS SHORT OF SUPPLIES", f"{short}", "saline, test kits or beds", short > 0),
-            ("PATIENTS WITHOUT A BED", f"{b['unplaced']}", f"after moving {b['patients_moved']}", b["unplaced"] > 0),
-            ("SPRAYING CREWS", f"{b['crews_assigned']} / {b['crews_needed']}", "assigned / needed",
+    kpis = [(L("HIGH-RISK WARDS"), f"{N(b['high_wards'])} / {N(b['wards'])}",
+             L("{n} critical", n=b["critical_wards"]), b["high_wards"] > 0),
+            (L("WARDS SHORT OF SUPPLIES"), N(short), L("saline, test kits or beds"), short > 0),
+            (L("PATIENTS WITHOUT A BED"), N(b["unplaced"]), L("after moving {n}", n=b["patients_moved"]),
+             b["unplaced"] > 0),
+            (L("SPRAYING CREWS"), f"{N(b['crews_assigned'])} / {N(b['crews_needed'])}", L("assigned / needed"),
              b["crews_unmet"] > 0)]
     cells = [[P(_e(k), s["kpi_l"]), P(_e(v), s["kpi_bad"] if bad else s["kpi_v"]), P(_e(sub), s["small"])]
              for k, v, sub, bad in kpis]
@@ -121,85 +168,96 @@ def _story(b: Mapping[str, Any], width: float, s: dict) -> list:
     out.append(row)
 
     # Risk: one row per city, then the five highest-priority wards.
-    out.append(P("Risk", s["h2"]))
+    out.append(P(L("Risk"), s["h2"]))
     head = ["City", "High wards", "Expected cases", "Wards short", "Crews", "Moved", "No bed"]
-    rows = [[P(h, s["head"] if i == 0 else s["head_r"]) for i, h in enumerate(head)]]
+    rows = [[P(L(h), s["head"] if i == 0 else s["head_r"]) for i, h in enumerate(head)]]
     for c in b.get("by_city", []):
-        rows.append([P(_e(c["city"]), s["cell"]), P(f"{c['high_wards']} / {c['wards']}", s["cell_r"]),
-                     P(f"{c['expected_cases']:,.0f}", s["cell_r"]), P(str(c["short_wards"]), s["cell_r"]),
-                     P(f"{c['crews_assigned']} / {c['crews_needed']}", s["cell_r"]),
-                     P(str(c["patients_moved"]), s["cell_r"]), P(str(c["unplaced"]), s["cell_r"])])
+        rows.append([P(_e(I.tr(c["city"], lang)), s["cell"]),
+                     P(f"{N(c['high_wards'])} / {N(c['wards'])}", s["cell_r"]),
+                     P(N(c["expected_cases"], ",.0f"), s["cell_r"]), P(N(c["short_wards"]), s["cell_r"]),
+                     P(f"{N(c['crews_assigned'])} / {N(c['crews_needed'])}", s["cell_r"]),
+                     P(N(c["patients_moved"]), s["cell_r"]), P(N(c["unplaced"]), s["cell_r"])])
     out.append(_table(rows, [width * f for f in (0.25, 0.13, 0.15, 0.12, 0.13, 0.11, 0.11)]))
     out.append(Spacer(1, 5))
     top = b.get("top_rows") or [{"ward_id": w, "tier": "", "expected_cases": 0.0, "status": ""} for w in b["top_wards"]]
-    rows = [[P("Send teams first", s["head"]), P("Risk", s["head"]), P("Cases", s["head_r"]), P("Status", s["head"])]]
+    rows = [[P(L("Send teams first"), s["head"]), P(L("Risk"), s["head"]), P(L("Cases"), s["head_r"]),
+             P(L("Status"), s["head"])]]
     for i, r in enumerate(top, 1):
         tier = r.get("tier", "")
-        rows.append([P(_e(f"{i}. {ward_label(r['ward_id'])}"), s["cell"]),
-                     P(f'<font color="{TIER_INK.get(tier, INK)}"><b>{_e(tier)}</b></font>', s["cell"]),
-                     P(f"{r.get('expected_cases', 0.0):.1f}", s["cell_r"]), P(_e(r.get("status", "")), s["cell"])])
+        rows.append([P(_e(f"{N(i)}. {W(r['ward_id'])}"), s["cell"]),
+                     P(f'<font color="{TIER_INK.get(tier, INK)}"><b>{_e(I.tier(tier, lang) if tier else tier)}</b></font>',
+                       s["cell"]),
+                     P(N(r.get("expected_cases", 0.0), ".1f"), s["cell_r"]), P(_e(r.get("status", "")), s["cell"])])
     out.append(_table(rows, [width * f for f in (0.27, 0.12, 0.11, 0.50)]))
 
     # Supplies.
-    out.append(P("Supplies", s["h2"]))
-    rows = [[P(h, s["head"] if i == 0 else s["head_r"]) for i, h in
+    out.append(P(L("Supplies"), s["h2"]))
+    rows = [[P(L(h), s["head"] if i == 0 else s["head_r"]) for i, h in
              enumerate(["Item", "Needed", "Available", "Short", "Wards short", "Filled"])]]
     for label, r in (b.get("resources") or {}).items():
         gap = r["short"]
-        name = {"beds": "Hospital beds (stock)"}.get(label, label.capitalize())
-        rows.append([P(_e(name), s["cell"]), P(f"{r['needed']:,}", s["cell_r"]),
-                     P(f"{r['allocated']:,}", s["cell_r"]),
-                     P(f'<font color="{BAD if gap else OK}"><b>{gap:,}</b></font>', s["cell_r"]),
-                     P(str(r.get("wards_short", 0)), s["cell_r"]), P(f"{r['fill']:.0%}", s["cell_r"])])
+        name = L({"beds": "Hospital beds (stock)"}.get(label, label.capitalize()))
+        rows.append([P(_e(name), s["cell"]), P(N(r["needed"], ","), s["cell_r"]),
+                     P(N(r["allocated"], ","), s["cell_r"]),
+                     P(f'<font color="{BAD if gap else OK}"><b>{N(gap, ",")}</b></font>', s["cell_r"]),
+                     P(N(r.get("wards_short", 0)), s["cell_r"]), P(N(r["fill"], ".0%"), s["cell_r"])])
     if len(rows) > 1:
         out.append(_table(rows, [width * f for f in (0.30, 0.14, 0.14, 0.14, 0.14, 0.14)]))
     else:
-        out.append(P(_e(f"{b['saline_short_bags']:,} saline bags and {b['kits_short']:,} test kits short."), s["body"]))
+        out.append(P(_e(L("{s:,} saline bags and {k:,} test kits short.", s=b["saline_short_bags"],
+                          k=b["kits_short"])), s["body"]))
 
     # Patient transfers.
-    out.append(P("Patient transfers", s["h2"]))
+    out.append(P(L("Patient transfers"), s["h2"]))
     transfers = list(b.get("transfers") or [])
     if transfers:
         for t in transfers[:MAX_TRANSFERS]:
-            out.append(P(_e(f"{ward_label(t['from_ward'])} to {ward_label(t['to_ward'])}: {int(t['patients'])}"),
-                         s["body"]))
+            out.append(P(_e(L("{src} to {dst}: {n}", src=W(t["from_ward"]), dst=W(t["to_ward"]),
+                              n=int(t["patients"]))), s["body"]))
         if len(transfers) > MAX_TRANSFERS:
-            out.append(P(_e(f"and {len(transfers) - MAX_TRANSFERS} more transfers (see Hospital beds)."), s["small"]))
+            out.append(P(_e(L("and {n} more transfers (see Hospital beds).", n=len(transfers) - MAX_TRANSFERS)),
+                         s["small"]))
     else:
-        out.append(P("None: every ward's own beds cover the forecast.", s["body"]))
+        out.append(P(L("None: every ward's own beds cover the forecast."), s["body"]))
     missing = b.get("out_of_beds") or []
     if missing:
-        out.append(P(_e(f"Still out of beds: {', '.join(ward_label(w) for w in missing)}."), s["warn"]))
+        out.append(P(_e(L("Still out of beds: {wards}.", wards=", ".join(W(w) for w in missing))), s["warn"]))
 
     # Crew plan and notices.
-    out.append(P("Crew plan", s["h2"]))
+    out.append(P(L("Crew plan"), s["h2"]))
     if b["crews_needed"] == 0:
-        crew = "No ward is High or Critical, so crews can stay in reserve."
+        crew = L("No ward is High or Critical, so crews can stay in reserve.")
     else:
-        crew = (f"{b['crews_assigned']} of {b['crews_needed']} crews needed are assigned, "
-                f"across {b.get('crew_wards', 0)} wards, highest priority first.")
+        crew = L("{a} of {n} crews needed are assigned, across {w} wards, highest priority first.",
+                 a=b["crews_assigned"], n=b["crews_needed"], w=b.get("crew_wards", 0))
     out.append(P(_e(crew), s["body"]))
-    out.append(P(_e(f"Cases prevented by this plan over weeks 2 to 4: {b['cases_prevented']:,.0f} "
-                    "(vector control simulator)."), s["body"]))
-    out.append(P("Notices", s["h2"]))
-    out.append(P(_e(f"Notices ready to send: {b['notices_ready']} (SMS, WhatsApp and commissioner brief for "
-                    "each High or Critical ward, on the Dispatch page)."), s["body"]))
+    out.append(P(_e(L("Cases prevented by this plan over weeks 2 to 4: {n:,.0f} (vector control simulator).",
+                      n=b["cases_prevented"])), s["body"]))
+    out.append(P(L("Notices"), s["h2"]))
+    out.append(P(_e(L("Notices ready to send: {n} (SMS, WhatsApp and commissioner brief for each High or "
+                      "Critical ward, on the Dispatch page).", n=b["notices_ready"])), s["body"]))
 
     # Sign-off and footer.
     out.append(Spacer(1, 12))
-    sign = Table([[P("Approved by", s["small"]), P("Signature", s["small"]), P("Date", s["small"])]],
+    sign = Table([[P(L("Approved by"), s["small"]), P(L("Signature"), s["small"]), P(L("Date"), s["small"])]],
                  colWidths=[width / 3] * 3, rowHeights=[22])
     sign.setStyle(TableStyle([("LINEABOVE", (0, 0), (-1, 0), 0.6, HexColor(MUTED)),
                               ("VALIGN", (0, 0), (-1, -1), "TOP"), ("LEFTPADDING", (0, 0), (-1, -1), 0)]))
-    out += [sign, Spacer(1, 4), P(_e(FOOTER), s["small"])]
+    out += [sign, Spacer(1, 4), P(_e(L(FOOTER)), s["small"])]
     return out
 
 
-def briefing_pdf(brief: Mapping[str, Any]) -> bytes:
+def briefing_pdf(brief: Mapping[str, Any], lang: str = "en") -> bytes:
     """One A4 page for ``brief`` (from :func:`moshari.briefing.build`), as PDF bytes.
 
-    Raises ``ImportError`` when reportlab is not installed.
+    ``lang="bn"`` writes it in Bangla; pass the brief built with the same ``lang`` so the
+    decision sentences match. Raises ``ImportError`` when reportlab is not installed,
+    ``RuntimeError`` when Bangla is asked for without ``uharfbuzz``, and ``FileNotFoundError``
+    when a bundled Bangla font file is missing.
     """
+    lang = I.norm(lang)
+    if lang == "bn":
+        _register_bangla()
     from reportlab.lib.pagesizes import A4
     from reportlab.lib.units import mm
     from reportlab.platypus import KeepInFrame, SimpleDocTemplate
@@ -210,5 +268,5 @@ def briefing_pdf(brief: Mapping[str, Any]) -> bytes:
                             title="Moshari weekly briefing", author="Moshari", creator="Moshari",
                             subject="Weekly dengue briefing")
     # Shrink, never spill: the briefing is always exactly one page.
-    doc.build([KeepInFrame(doc.width, doc.height - 2, _story(brief, doc.width, _styles()), mode="shrink")])
+    doc.build([KeepInFrame(doc.width, doc.height - 2, _story(brief, doc.width, _styles(lang), lang), mode="shrink")])
     return buf.getvalue()
