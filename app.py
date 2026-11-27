@@ -37,6 +37,7 @@ theme.inject_css()
 
 PAGES = [
     st.Page("ui/views/ward_net.py", title="Overview", icon=":material/space_dashboard:", default=True),
+    st.Page("ui/views/resources.py", title="Resources", icon=":material/inventory_2:"),
     st.Page("ui/views/live.py", title="Live outlook", icon=":material/cloud:"),
     st.Page("ui/views/ward_forecast.py", title="Ward forecast", icon=":material/monitoring:"),
     st.Page("ui/views/model_check.py", title="Model accuracy", icon=":material/verified:"),
