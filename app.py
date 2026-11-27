@@ -42,6 +42,7 @@ PAGES = [
     st.Page("ui/views/hospital.py", title="Hospital beds", icon=":material/local_hospital:"),
     st.Page("ui/views/simulator.py", title="Simulator", icon=":material/science:"),
     st.Page("ui/views/dispatch.py", title="Dispatch", icon=":material/campaign:"),
+    st.Page("ui/views/briefing.py", title="Weekly briefing", icon=":material/summarize:"),
     # forecasting and evidence
     st.Page("ui/views/live.py", title="Live outlook", icon=":material/cloud:"),
     st.Page("ui/views/ward_forecast.py", title="Ward forecast", icon=":material/monitoring:"),
