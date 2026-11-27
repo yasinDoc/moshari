@@ -103,12 +103,13 @@ Optional:
 ```bash
 python scripts/train.py            # retrain and re-evaluate (about 2 minutes on a laptop CPU)
 pip install -r requirements-dev.txt && pytest   # 1041 tests
+pip install -r requirements-dev.txt && pytest   # 1031 tests
 docker build -t moshari . && docker run -p 8501:8501 moshari
 ```
 
 ## What it does
 
-The sidebar follows an officer's working order: see the risk, allocate supplies, place patients, deploy crews, send the notices. The evidence pages come after.
+The sidebar follows an officer's working order: see the risk, allocate supplies, place patients, deploy crews, send the notices. The evidence pages come after. Under **Forecast issued**, three shortcuts jump to useful weeks: **Early** (a few weeks before the latest season's peak, the default), **Peak** (the week of the latest season with the heaviest forecast, picked by the model itself, so every module has shortages, crews and overflow to show) and **Latest** (the newest week in the data).
 
 | Page | What a health officer gets |
 |---|---|
@@ -118,6 +119,7 @@ The sidebar follows an officer's working order: see the risk, allocate supplies,
 | **Simulator** | Choose how many crews, or place them by hand, and see the cases, beds and saline they save at 2, 3 and 4 weeks. Wards are ranked by cases prevented per crew, with a best-next-crew suggestion. |
 | **Dispatch** | Pick one ward or all High and Critical wards and preview the SMS, the WhatsApp message and the commissioner brief. Download them one by one, as a zip, or as one printable file. |
 | **Weekly briefing** | All five modules as one decision in four sentences (risk, crews to approve, supplies to release, patients to move), with a table per city, the wards to visit first, transfers, the crew plan's cases prevented and the notices ready. One button downloads it as a one-page A4 PDF to hand to a city health officer. Built offline from the same engines as the other pages. |
+| **Dispatch** | Pick one ward or all High and Critical wards and preview the SMS, the WhatsApp message and the commissioner brief, in **English or Bangla (বাংলা)**. Download them one by one, as a zip, or as one printable file. Bangla SMS go out as Unicode, so they are held to two SMS parts (134 characters). |
 | **Live outlook** | Today's real weather from Open-Meteo (last 13 weeks plus a 14-day forecast) for every ward, with recent cases nowcast from that weather. The rain forecast feeds the 3- and 4-week outlook. One cached request for all five cities. |
 | **Ward forecast** | One ward's 2-, 3- and 4-week outlook with an 80% range, the chance of reaching High and Critical, and the recommended response. A chart that lines up rain with later cases. The drivers behind the forecast, and what-if sliders for rain, temperature and humidity that re-run the model live. |
 | **Model accuracy** | Hold-out results for 2024–25 against three simple baselines, a replay of both seasons, alert sensitivity, Critical weeks caught by probability, the gain from a rain forecast, and the evidence for the 3-week breeding lag. |
@@ -225,6 +227,7 @@ moshari/
 │   ├── routing.py          # bed capacity and overflow routing within a city
 │   ├── simulation.py       # vector-control crew simulator
 │   ├── dispatch.py         # SMS, WhatsApp and commissioner brief templates
+│   ├── dispatch_bn.py      # the same notices in Bangla (Unicode SMS, at most 2 parts)
 │   ├── dispatch_pdf.py     # the brief as a PDF (reportlab)
 │   └── api.py              # FastAPI REST layer
 ├── scripts/                # train.py, fetch_data.py, export_dispatch.py, offline_check.py

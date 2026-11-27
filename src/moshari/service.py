@@ -62,6 +62,23 @@ class ForecastService:
         dates = pd.DatetimeIndex(self.issue_dates)
         return dates[dates.get_indexer([target], method="nearest")[0]]
 
+    def peak_issue_date(self, horizon: int = 3) -> pd.Timestamp:
+        """The issue week, in the most recent season, whose forecast is heaviest.
+
+        Chosen by the model's own forecast (total expected cases ``horizon`` weeks
+        ahead, ties to the earlier week), so it needs no hindsight and works on an
+        uploaded file too: it is the week an officer would most want to rehearse.
+        """
+        dates = pd.DatetimeIndex(self.issue_dates)
+        season = dates[dates.year == dates.max().year]
+        tl = self.forecast_timeline(list(season), horizon)
+        load = tl.groupby("target_date")["expected_cases"].sum()
+        return pd.Timestamp(load.idxmax()) - pd.Timedelta(weeks=horizon)
+
+    def latest_issue_date(self) -> pd.Timestamp:
+        """The newest week with a complete feature row."""
+        return pd.Timestamp(self.issue_dates[-1])
+
     # -------------------------------------------------------------- forecasts
     def forecast_all(self, issue_date, horizon: int, cities: list[str] | None = None,
                      policy: str = DEFAULT_ALERT_POLICY) -> pd.DataFrame:

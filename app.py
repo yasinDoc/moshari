@@ -38,6 +38,7 @@ theme.inject_css()
 PAGES = [
     # operations workflow: see risk -> allocate supplies -> place patients -> deploy crews -> notify
     st.Page("ui/views/ward_net.py", title="Overview", icon=":material/space_dashboard:", default=True),
+    st.Page("ui/views/ward_map.py", title="Ward map", icon=":material/map:"),
     st.Page("ui/views/resources.py", title="Resources", icon=":material/inventory_2:"),
     st.Page("ui/views/hospital.py", title="Hospital beds", icon=":material/local_hospital:"),
     st.Page("ui/views/simulator.py", title="Simulator", icon=":material/science:"),
