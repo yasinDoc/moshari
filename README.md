@@ -36,7 +36,7 @@ Phase 2, on the demo week (forecast issued 2 June 2025, 3 weeks ahead):
 | 30 spraying crews, placed by the simulator | **48 fewer cases** at 3 weeks (399 to 351), about 14 beds and 114 saline bags saved |
 | Dispatch notices | **26** High-risk wards, each with an SMS of 160 characters or fewer, a WhatsApp message and a one-page brief, in [`exports/`](exports/) |
 | Offline | All **9** pages render with the internet cut off, with and without the kill switch (`tests/test_offline.py`, `tests/test_offline_wifi_off.py`); only Live outlook ever tries to go online |
-| Tests | **1013** passing |
+| Tests | **1041** passing |
 
 **Try it live:** https://moshari-sa5dxzxydg98ej4umhvbst.streamlit.app/ (free hosting sleeps when idle; the first visit can take about 30 seconds to wake)
 
@@ -102,6 +102,7 @@ Optional:
 
 ```bash
 python scripts/train.py            # retrain and re-evaluate (about 2 minutes on a laptop CPU)
+pip install -r requirements-dev.txt && pytest   # 1041 tests
 pip install -r requirements-dev.txt && pytest   # 1031 tests
 docker build -t moshari . && docker run -p 8501:8501 moshari
 ```
@@ -112,10 +113,12 @@ The sidebar follows an officer's working order: see the risk, allocate supplies,
 
 | Page | What a health officer gets |
 |---|---|
-| **Overview** | Every ward's risk for the chosen week as tiles in a net, grouped by city corporation, plus a whole-season view. Wards on Critical watch, early alerts, the six wards to send teams to first, and risk by city. Click any ward to open its forecast. |
+| **Overview** | A red supply alert line at the top (for example "25 wards short on saline · 24 wards short on test kits · 12 crews short", at 70% stock and 40 crews), so shortages show before you open Resources or Hospital beds. Every ward's risk for the chosen week as tiles in a net, grouped by city corporation, plus a whole-season view. Wards on Critical watch, early alerts, the six wards to send teams to first, and risk by city. Click any ward to open its forecast. |
 | **Resources** | Saline bags, test kits, beds and spraying crews for every ward. An "Available regional stock" slider (30% to 100% of demand) and a crew count, so you can see who goes short when stock is scarce, with a live list of deficit wards. |
 | **Hospital beds** | Bed demand against each ward's normal capacity, per-city cards for utilisation and headroom, the transfers that move overflow patients to wards with spare beds in the same city, and the wards still short, in red. A surge slider adds corridor or field beds. |
 | **Simulator** | Choose how many crews, or place them by hand, and see the cases, beds and saline they save at 2, 3 and 4 weeks. Wards are ranked by cases prevented per crew, with a best-next-crew suggestion. |
+| **Dispatch** | Pick one ward or all High and Critical wards and preview the SMS, the WhatsApp message and the commissioner brief. Download them one by one, as a zip, or as one printable file. |
+| **Weekly briefing** | All five modules as one decision in four sentences (risk, crews to approve, supplies to release, patients to move), with a table per city, the wards to visit first, transfers, the crew plan's cases prevented and the notices ready. One button downloads it as a one-page A4 PDF to hand to a city health officer. Built offline from the same engines as the other pages. |
 | **Dispatch** | Pick one ward or all High and Critical wards and preview the SMS, the WhatsApp message and the commissioner brief, in **English or Bangla (বাংলা)**. Download them one by one, as a zip, or as one printable file. Bangla SMS go out as Unicode, so they are held to two SMS parts (134 characters). |
 | **Live outlook** | Today's real weather from Open-Meteo (last 13 weeks plus a 14-day forecast) for every ward, with recent cases nowcast from that weather. The rain forecast feeds the 3- and 4-week outlook. One cached request for all five cities. |
 | **Ward forecast** | One ward's 2-, 3- and 4-week outlook with an 80% range, the chance of reaching High and Critical, and the recommended response. A chart that lines up rain with later cases. The drivers behind the forecast, and what-if sliders for rain, temperature and humidity that re-run the model live. |

@@ -230,6 +230,14 @@ a.m-cell { cursor:pointer; }
 .m-probs b { text-align:right; color:var(--ink); font-variant-numeric:tabular-nums; }
 .m-probs .pb { height:8px; border-radius:99px; box-shadow:var(--press-sm); overflow:hidden; display:block; }
 .m-probs .pb span { display:block; height:100%; border-radius:99px; }
+.m-alert { display:flex; gap:12px; align-items:flex-start; padding:14px 18px; border-radius:var(--r-md);
+           box-shadow:var(--press); background:var(--base); margin:0 0 var(--s2); }
+.m-alert .mi { font-size:22px; margin-top:1px; }
+.m-alert.bad .mi, .m-alert.bad .t b { color:$CRIT; }
+.m-alert.ok .mi, .m-alert.ok .t b { color:var(--accent); }
+.m-alert .t { font-size:16px; line-height:1.45; }
+.m-alert .t .sep { color:var(--muted); }
+.m-alert .s { color:var(--muted); font-size:13px; margin-top:3px; }
 .m-act { margin-top:var(--s5); padding:var(--s4) 18px; border-radius:var(--r-md); box-shadow:var(--press); background:var(--base); }
 .m-act .h { display:flex; align-items:center; gap:var(--s2); font-size:15px; font-weight:700; color:var(--ink); margin-bottom:4px; }
 .m-act .h .mi { font-size:18px; color:var(--accent); }
@@ -273,6 +281,9 @@ button[data-variant="segmented_control"][aria-checked="true"], [data-testid="stB
   box-shadow:4px 4px 12px rgba(14,115,105,.32), -4px -4px 10px var(--light) !important; }
 .stButton button[data-testid="stBaseButton-primary"] p, .stButton button[data-testid="stBaseButton-primary"] span { color:#fff !important; }
 .stButton button[data-testid="stBaseButton-primary"]:hover { background:#0B655C !important; }
+.stDownloadButton button[data-testid="stBaseButton-primary"] p,
+.stDownloadButton button[data-testid="stBaseButton-primary"] span { color:#fff !important; }
+.stDownloadButton button[data-testid="stBaseButton-primary"]:hover { background:#0B655C !important; }
 .stButton button:active { box-shadow:var(--press-sm) !important; }
 .stButton button:disabled, .stButton button[disabled] { opacity:1 !important; box-shadow:var(--press-sm) !important;
   color:var(--muted) !important; cursor:not-allowed; }

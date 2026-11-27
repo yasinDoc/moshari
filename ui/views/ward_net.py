@@ -2,10 +2,14 @@
 
 from __future__ import annotations
 
+import html
+
 import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
 
+from moshari import allocation as A
+from moshari import briefing as B
 from moshari import config as C
 from moshari.data import corporation_of, ward_label
 from moshari.risk import TIERS
@@ -26,6 +30,36 @@ theme.header(
     f"Dengue outlook for the week of {state.fmt_week(target)}",
     [("event", "Issued", state.fmt_week(issue_date)), ("schedule", "Horizon", f"{horizon} weeks")],
 )
+
+
+
+# --------------------------------------------------------------------------- supply alert strip
+@st.cache_data(show_spinner=False, max_entries=128)
+def supply_alerts(key: str, issue_date, horizon: int, cities: tuple, policy: str) -> dict:
+    """Shortages at the Resources / Hospital beds defaults, so the officer sees them here first."""
+    f = state.forecast_all(key, issue_date, horizon, cities, policy)
+    alloc = A.allocate(f, state.service().wards, B.OVERVIEW_STOCK, B.OVERVIEW_CREWS)
+    return B.supply_alerts(alloc, B.beds_routing(state.service(), f, B.OVERVIEW_SURGE).ward_summary)
+
+
+alerts = supply_alerts(key, issue_date, horizon, cities, policy)
+parts = B.alert_parts(alerts)
+scenario = f"At {B.OVERVIEW_STOCK:.0%} stock and {B.OVERVIEW_CREWS} crews."
+if parts:
+    shown = '<span class="sep"> · </span>'.join(f'<b>{html.escape(t)}</b>' for t, _ in parts)
+    st.html(f'<div class="m-alert bad">{theme.icon("report")}<div><div class="t">{shown}</div>'
+            f'<div class="s">{scenario} Open Resources or Hospital beds to change the plan, '
+            'or the Weekly briefing for a one-page summary.</div></div></div>')
+else:
+    st.html(f'<div class="m-alert ok">{theme.icon("check_circle")}<div><div class="t"><b>{B.alert_text(alerts)}</b>'
+            f'</div><div class="s">{scenario} No ward is short of saline, test kits, crews or beds.</div></div></div>')
+with st.container(key="alert-links", horizontal=True):
+    kinds = {k for _, k in parts}
+    if kinds & {"supplies", "crews"}:
+        st.page_link("ui/views/resources.py", label="Resources", icon=":material/inventory_2:")
+    if "beds" in kinds:
+        st.page_link("ui/views/hospital.py", label="Hospital beds", icon=":material/local_hospital:")
+    st.page_link("ui/views/briefing.py", label="Weekly briefing", icon=":material/summarize:")
 
 n_high = int((fc["tier_idx"] >= 2).sum())
 n_on = int(fc["alert"].sum())
