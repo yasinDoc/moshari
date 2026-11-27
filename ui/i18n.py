@@ -439,13 +439,4 @@ def frame(df: pd.DataFrame, column_config: dict | None = None,
 
 def deficit_note(r) -> str:
     """Allocation status of one ward (``moshari.allocation.allocate`` row) in the current language."""
-    if not is_bn():
-        return r["deficit_note"]
-    names = (("saline_bags_needed", "saline_bags_allocated", "স্যালাইন ব্যাগ"),
-             ("diagnostic_kits_needed", "diagnostic_kits_allocated", "টেস্ট কিট"),
-             ("hospital_beds_required", "hospital_beds_allocated", "শয্যা"))
-    short = [f"{core.digits(int(r[n] - r[a]))}টি {label}" for n, a, label in names if r[a] < r[n]]
-    gap = int(r["crews_needed"] - r["crews_assigned"])
-    parts = ([f"ঘাটতি: {', '.join(short)}"] if short else []) + (
-        [f"আরও {core.digits(gap)}টি দল দরকার"] if gap > 0 else [])
-    return "; ".join(parts) if parts else "পুরো সরবরাহ পাওয়া গেছে"
+    return core.deficit_note_bn(r) if is_bn() else r["deficit_note"]

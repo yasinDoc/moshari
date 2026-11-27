@@ -46,19 +46,14 @@ def supply_alerts(key: str, issue_date, horizon: int, cities: tuple, policy: str
 
 
 alerts = supply_alerts(key, issue_date, horizon, cities, policy)
-parts = B.alert_parts(alerts)
-if i18n.is_bn():
-    _bn_alert = {"saline_wards": "{n} wards short on saline", "kits_wards": "{n} wards short on test kits",
-                 "crews_short": "{n} crews short", "out_of_beds_wards": "{n} wards out of beds"}
-    parts = [(T(_bn_alert[k], n=int(alerts[k])), kind) for k, (_, kind) in
-             zip([k for k in _bn_alert if int(alerts.get(k, 0))], parts)]
+parts = B.alert_parts(alerts, i18n.lang())
 scenario = T("At {stock:.0%} stock and {crews} crews.", stock=B.OVERVIEW_STOCK, crews=B.OVERVIEW_CREWS)
 if parts:
     shown = '<span class="sep"> · </span>'.join(f'<b>{html.escape(t)}</b>' for t, _ in parts)
     st.html(f'<div class="m-alert bad">{theme.icon("report")}<div><div class="t">{shown}</div>'
             f'<div class="s">{scenario}{T(" Open Resources or Hospital beds to change the plan, or the Weekly briefing for a one-page summary.")}</div></div></div>')
 else:
-    st.html(f'<div class="m-alert ok">{theme.icon("check_circle")}<div><div class="t"><b>{T(B.alert_text(alerts))}</b>'
+    st.html(f'<div class="m-alert ok">{theme.icon("check_circle")}<div><div class="t"><b>{B.alert_text(alerts, i18n.lang())}</b>'
             f'</div><div class="s">{scenario}{T(" No ward is short of saline, test kits, crews or beds.")}</div></div></div>')
 with st.container(key="alert-links", horizontal=True):
     kinds = {k for _, k in parts}

@@ -154,3 +154,16 @@ def date_fmt(d, fmt: str, lang: str = "en") -> str:
                "%Y": str(d.year)}
     out = re.sub(r"%[deBbmyY]", lambda m: mapping[m.group()], fmt)
     return digits(out)
+
+
+def deficit_note_bn(r) -> str:
+    """The allocation status of one ward (a :func:`moshari.allocation.allocate` row) in Bangla,
+    by the same rule as its English ``deficit_note``."""
+    names = (("saline_bags_needed", "saline_bags_allocated", "স্যালাইন ব্যাগ"),
+             ("diagnostic_kits_needed", "diagnostic_kits_allocated", "টেস্ট কিট"),
+             ("hospital_beds_required", "hospital_beds_allocated", "শয্যা"))
+    short = [f"{digits(int(r[n] - r[a]))}টি {label}" for n, a, label in names if r[a] < r[n]]
+    gap = int(r["crews_needed"] - r["crews_assigned"])
+    parts = ([f"ঘাটতি: {', '.join(short)}"] if short else []) + (
+        [f"আরও {digits(gap)}টি দল দরকার"] if gap > 0 else [])
+    return "; ".join(parts) if parts else "পুরো সরবরাহ পাওয়া গেছে"

@@ -25,6 +25,7 @@ from . import config as C
 from . import dispatch as D
 from . import routing as R
 from . import simulation as S
+from . import i18n as I
 from .risk import DEFAULT_ALERT_POLICY
 
 # The Overview strip uses the default scenario of the Resources and Hospital beds pages.
@@ -60,19 +61,53 @@ def supply_alerts(alloc: pd.DataFrame, ward_summary: pd.DataFrame) -> dict[str, 
     }
 
 
-def alert_parts(alerts: Mapping[str, int]) -> list[tuple[str, str]]:
+def alert_parts(alerts: Mapping[str, int], lang: str = "en") -> list[tuple[str, str]]:
     """``(text, kind)`` for each non-zero shortage; kind is "supplies", "crews" or "beds"."""
-    spec = [("saline_wards", "ward", " short on saline", "supplies"),
-            ("kits_wards", "ward", " short on test kits", "supplies"),
-            ("crews_short", "crew", " short", "crews"),
-            ("out_of_beds_wards", "ward", " out of beds", "beds")]
-    return [(plural(int(alerts[k]), w) + tail, kind) for k, w, tail, kind in spec if int(alerts.get(k, 0))]
+    spec = [("saline_wards", "ward", " short on saline", "supplies", "{n} wards short on saline"),
+            ("kits_wards", "ward", " short on test kits", "supplies", "{n} wards short on test kits"),
+            ("crews_short", "crew", " short", "crews", "{n} crews short"),
+            ("out_of_beds_wards", "ward", " out of beds", "beds", "{n} wards out of beds")]
+    if I.norm(lang) == "bn":
+        return [(I.t(bn, "bn", n=int(alerts[k])), kind) for k, _, _, kind, bn in spec if int(alerts.get(k, 0))]
+    return [(plural(int(alerts[k]), w) + tail, kind) for k, w, tail, kind, _ in spec if int(alerts.get(k, 0))]
 
 
-def alert_text(alerts: Mapping[str, int]) -> str:
+def alert_text(alerts: Mapping[str, int], lang: str = "en") -> str:
     """One line, e.g. "12 wards short on saline · 3 wards out of beds", or "All wards supplied"."""
-    parts = [t for t, _ in alert_parts(alerts)]
-    return ALERT_SEP.join(parts) if parts else "All wards supplied"
+    parts = [t for t, _ in alert_parts(alerts, lang)]
+    return ALERT_SEP.join(parts) if parts else I.t("All wards supplied", lang)
+
+
+def _decision_bn(target: pd.Timestamp, wards: int, high: int, needed: int, assigned: int, unmet: int,
+                 saline: int, kits: int, deficit: int, moved: int, unplaced: int) -> list[str]:
+    """:func:`_decision` in Bangla: the same four sentences, chosen by the same rules."""
+    def t(text: str, **kw: Any) -> str:
+        return I.t(text, "bn", **kw)
+
+    s1 = t("{high} of {wards} wards are High or Critical risk for the week of {week}.",
+           high=high, wards=wards, week=I.week(target, "bn"))
+    if needed == 0:
+        s2 = t("No spraying crews are needed this week.")
+    elif unmet:
+        s2 = t("Approve {unmet} more spraying crews: {needed} needed, {assigned} assigned.",
+               unmet=unmet, needed=needed, assigned=assigned)
+    else:
+        s2 = t("All {needed} crews needed are assigned.", needed=needed)
+    if deficit:
+        s3 = t("Release {saline} more saline bags and {kits} more test kits to cover {deficit} short wards.",
+               saline=saline, kits=kits, deficit=deficit)
+    else:
+        s3 = t("Every ward is fully supplied.")
+    if moved and unplaced:
+        s4 = t("Move {moved} patients between wards in the same city; beds are still missing for {unplaced} patients.",
+               moved=moved, unplaced=unplaced)
+    elif moved:
+        s4 = t("Move {moved} patients between wards in the same city; every patient has a bed.", moved=moved)
+    elif unplaced:
+        s4 = t("No transfer can help: beds are still missing for {unplaced} patients.", unplaced=unplaced)
+    else:
+        s4 = t("No patient transfers are needed.")
+    return [s1, s2, s3, s4]
 
 
 def _decision(target: pd.Timestamp, wards: int, high: int, needed: int, assigned: int, unmet: int,
@@ -122,13 +157,16 @@ def _by_city(fc: pd.DataFrame, alloc: pd.DataFrame, rr: R.RoutingResult) -> list
 
 
 def build(svc, issue_date, horizon: int, cities: Iterable[str] = (), policy: str = DEFAULT_ALERT_POLICY,
-          stock_pct: float = 0.70, crews: int = 40, surge_pct: float = 0) -> dict[str, Any]:
+          stock_pct: float = 0.70, crews: int = 40, surge_pct: float = 0, lang: str = "en") -> dict[str, Any]:
     """Everything the weekly briefing shows, for one forecast week and one supply scenario.
 
     ``svc``: a :class:`moshari.service.ForecastService`. ``cities``: city names to keep
     (empty = all five). ``stock_pct``: regional stock as a share of demand (0-1].
     ``crews``: spraying crews available. ``surge_pct``: extra surge beds per ward, in %.
+    ``lang``: "en" (default) or "bn"; Bangla changes only the sentences (decision, ward status),
+    never a number.
     """
+    bangla = I.norm(lang) == "bn"
     cities = list(cities)
     issue = pd.Timestamp(issue_date)
     fc = svc.forecast_all(issue, horizon, cities or None, policy)
@@ -168,7 +206,8 @@ def build(svc, issue_date, horizon: int, cities: Iterable[str] = (), policy: str
         "expected_cases": float(fc["expected_cases"].sum()),
         "top_wards": list(top[C.WARD_COL]),
         "top_rows": [{"ward_id": r.ward_id, "city": r.city, "tier": r.tier, "expected_cases": float(r.expected_cases),
-                      "status": str(top_info.loc[r.ward_id, "deficit_note"])} for r in top.itertuples()],
+                      "status": (I.deficit_note_bn(top_info.loc[r.ward_id]) if bangla else
+                                 str(top_info.loc[r.ward_id, "deficit_note"]))} for r in top.itertuples()],
         "saline_short_bags": int(res["saline bags"]["short"]),
         "kits_short": int(res["test kits"]["short"]),
         "deficit_wards": int(summ["deficit_wards"]),
@@ -185,7 +224,7 @@ def build(svc, issue_date, horizon: int, cities: Iterable[str] = (), policy: str
         "crew_wards": int(sum(1 for c in plan.values() if c > 0)),
         "notices_ready": int(len(notices)),
         "by_city": _by_city(fc, alloc, rr),
-        "decision": _decision(target, wards, high, int(cr["needed"]), int(cr["assigned"]), int(cr["unmet"]),
+        "decision": (_decision_bn if bangla else _decision)(target, wards, high, int(cr["needed"]), int(cr["assigned"]), int(cr["unmet"]),
                               int(res["saline bags"]["short"]), int(res["test kits"]["short"]),
                               int(summ["deficit_wards"]), int(moved), unplaced),
     }
