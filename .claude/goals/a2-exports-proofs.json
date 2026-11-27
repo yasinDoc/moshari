@@ -1,0 +1,116 @@
+{
+  "goal": "a2-exports",
+  "proofs": [
+    {
+      "criterion": "1",
+      "kind": "target",
+      "command": "{python} .claude/goals/a2-exports-verify.py content",
+      "expect_regex": "(?m)^PASS content",
+      "timeout": 900,
+      "catches": "exports/ hand-written or copied, wrong settings or wards, text not from moshari.dispatch, thin/fake/compressed/non-deterministic PDF, stale files, unhandled empty selection, bad --issue or missing reportlab; PDF pages not one ward brief each in brief order; PDF not reportlab or not A4; script reading the goal verifier; copied PDFs (checked again at a second setting with --pdf all); bad --horizon/--stock/--crews not exit 2"
+    },
+    {
+      "criterion": "2",
+      "kind": "target",
+      "command": "{python} .claude/goals/a2-exports-verify.py tests && {python} -m pytest tests/test_export_dispatch.py -o addopts=\"\" -q -rs",
+      "expect_regex": "(?m)^(?:[89]|[1-9]\\d+) passed in ",
+      "catches": "missing, too few, hollow (no call or no assert) or skipped tests; tests that never touch export_dispatch, dispatch_pdf or a ward with transfers"
+    },
+    {
+      "criterion": "3",
+      "kind": "invariant",
+      "command": "{python} -m pytest -o addopts=\"\" -q",
+      "timeout": 900
+    },
+    {
+      "criterion": "4",
+      "kind": "target",
+      "command": "{python} .claude/goals/a2-exports-verify.py git",
+      "expect_regex": "(?m)^PASS git",
+      "catches": "work uncommitted, commit without version-onsite-final: prefix or not authored by Ananya, files changed outside SCOPE, exports/ not committed; work commits editing .claude/goals files; requirements-dev.txt gaining anything but reportlab"
+    }
+  ],
+  "counters": [
+    {
+      "name": "tests",
+      "command": "{python} -m pytest --co -q -o addopts=\"\"",
+      "regex": "(\\d+) tests? collected",
+      "rule": "no_decrease"
+    }
+  ],
+  "pinned": [
+    {
+      "path": ".claude/goals/a2-exports-design.md",
+      "sha256": "7926fc05ee9b34bc74870be441bcb4d77e215739f1df38cb8968fe54229ab30a"
+    },
+    {
+      "path": ".claude/goals/a2-exports-verify.py",
+      "sha256": "4104ca7615388bad01dff1b9196e6d191b23ea0319988aea8070519f0ae25d5c"
+    },
+    {
+      "path": "src/moshari/dispatch.py",
+      "sha256": "5a3fb9503dc0544522af5ec1c44fa42fbc59ccb4e9281cb62b96ec743a00cb60"
+    },
+    {
+      "path": "src/moshari/allocation.py",
+      "sha256": "8246b3ff4b7262197e551b68cdbaf0a7a224f788ba8826d08d792e9d577b5add"
+    },
+    {
+      "path": "src/moshari/routing.py",
+      "sha256": "fac3a76a3639dcc51cd92f603524cd253ded95f56601773e1f73776f02299f29"
+    },
+    {
+      "path": "src/moshari/service.py",
+      "sha256": "bdebbe7d9d8945bd3a23225d98361ce70cef2496df917d76103cec9d4a980b26"
+    },
+    {
+      "path": "src/moshari/data.py",
+      "sha256": "f2a43b5ec1f3f5bd3b23ef391c7bfc0ef67abb1b4e5c391a3f9ef2a936e43dba"
+    },
+    {
+      "path": "src/moshari/config.py",
+      "sha256": "9433e79e7841aabdb546cc447f7525a7a44de935444be0801cfadebca500d8c6"
+    },
+    {
+      "path": "ui/",
+      "sha256": "feb1e2abb05d172dd1d0207ab16f7abe9bd8a8283cc358d743dd0f94cdb3884e"
+    },
+    {
+      "path": "app.py",
+      "sha256": "c60b66409bdead1706ac8f07df389d2a018bc0d3b962027ba186d2b1227f60d2"
+    },
+    {
+      "path": "tests/conftest.py",
+      "sha256": "d045c59f66751f418f7df15e066bd2aa6edd3c659f345587870880a1e0a2d6d9"
+    },
+    {
+      "path": "data/",
+      "sha256": "d9a6817d3626b00a7d50ee6d515813d7ad1bca4b1a44ba27ad5482e57d8d176d"
+    },
+    {
+      "path": "models/",
+      "sha256": "589ab2dca99d499f0ff7cffaff88f7c8213ee0327bec578cf85833beeaab056e"
+    },
+    {
+      "path": "requirements.txt",
+      "sha256": "f37c84a25cf85fa2d570a507f8eed1046da0330c46d28047f9af6bdeb7c899b6"
+    }
+  ],
+  "sample": {
+    "glob": "exports/sms/*.txt",
+    "n": 3,
+    "lines": 5
+  },
+  "baseline": {
+    "taken_at": "2026-11-27T06:03:11",
+    "counters": {
+      "tests": 976
+    },
+    "proof_rc": [
+      1,
+      1,
+      0,
+      1
+    ]
+  }
+}
