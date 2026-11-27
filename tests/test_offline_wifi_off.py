@@ -6,7 +6,7 @@ and DNS lookup is refused (as with Wi-Fi off), proxy settings are removed, and e
 is recorded, so a test can say exactly which page tried to go online.
 
 Guarantees:
-- all 9 pages render with no error, and only Live outlook ever tries the internet;
+- all 10 pages render with no error, and only Live outlook ever tries the internet;
 - Live outlook with no saved weather shows a friendly warning instead of crashing;
 - Live outlook with an old saved copy still works and says "Offline copy";
 - with the switch on, Live outlook makes no network attempt at all.
@@ -30,6 +30,7 @@ pytestmark = pytest.mark.skipif(not C.MODEL_PATH.exists(), reason="model not tra
 
 PAGES = {
     "ui/views/ward_net.py": "Overview",
+    "ui/views/ward_map.py": "Ward map",
     "ui/views/resources.py": "Resources",
     "ui/views/hospital.py": "Hospital beds",
     "ui/views/simulator.py": "Simulator",

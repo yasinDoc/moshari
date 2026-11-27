@@ -13,6 +13,7 @@ Run just one area while you work on it:
 .venv\Scripts\python -m pytest tests/test_allocation.py   # resource allocation rules
 .venv\Scripts\python -m pytest -k "cities"                # any test with "cities" in its name
 .venv\Scripts\python -m pytest tests/test_hospital_page.py # the Hospital beds page itself
+.venv\Scripts\python -m pytest tests/test_ward_map.py     # the Ward map: outline data, colours, links, page
 ```
 
 ## Allocation and routing (S2)
