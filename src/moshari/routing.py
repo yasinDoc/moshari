@@ -152,11 +152,14 @@ def route_overflow(alloc_df: pd.DataFrame, bed_capacity: CapacityLike,
         # Largest overflow first; ward id breaks ties.
         for sender in sorted(overflow, key=lambda w: (-overflow[w], w)):
             need = overflow[sender]
-            while need > 0:
-                spare = [w for w in load if w != sender and capacity[w] - load[w] > 0]
-                if not spare:
-                    break  # the city has no beds left
-                target = min(spare, key=lambda w: (load[w] / capacity[w], _distance(sender, w), w))
+            # Rank receivers once per sender. Every receiver except the last one used is
+            # filled completely and drops out, so the ranking never needs refreshing:
+            # O(R log R) per sender instead of re-scanning the city for every move.
+            spare = sorted((w for w in load if w != sender and capacity[w] > load[w]),
+                           key=lambda w: (load[w] / capacity[w], _distance(sender, w), w))
+            for target in spare:
+                if need <= 0:
+                    break
                 moved = min(need, capacity[target] - load[target])
                 load[target] += moved
                 received[target] += moved
@@ -185,6 +188,40 @@ def route_overflow(alloc_df: pd.DataFrame, bed_capacity: CapacityLike,
 
     transfer_df = pd.DataFrame(transfers, columns=TRANSFER_COLS).astype({"patients": int})
     return RoutingResult(transfer_df, ward_summary, city_summary)
+
+
+# --------------------------------------------------------------------------- what-if and summaries
+def with_surge(bed_capacity: pd.Series, surge_pct: float) -> pd.Series:
+    """Capacity after adding ``surge_pct`` % surge beds per ward (e.g. corridor or field beds).
+
+    Rounded down so the plan never counts beds that aren't there.
+    """
+    if surge_pct < 0:
+        raise ValueError("Surge percentage cannot be negative.")
+    cap = _as_capacity(bed_capacity)
+    return np.floor(cap * (1 + surge_pct / 100) + 1e-9).astype(int).rename("bed_capacity")
+
+
+def beds_to_clear(city_summary: pd.DataFrame) -> int:
+    """Extra beds needed, summed over cities, so that no patient is left without one."""
+    return int((-city_summary["headroom"]).clip(lower=0).sum())
+
+
+def plain_summary(city_summary: pd.DataFrame) -> list[str]:
+    """One plain-language sentence per city, worst first, for officers who won't read tables."""
+    lines = []
+    for r in city_summary.sort_values("utilization", ascending=False).itertuples():
+        moved = f", after moving {r.patients_moved} patient{'s' if r.patients_moved != 1 else ''}" \
+            if r.patients_moved else ""
+        if r.unplaced:
+            lines.append(f"{r.city} is {-r.headroom} bed{'s' if -r.headroom != 1 else ''} short{moved}: "
+                         f"{r.unplaced} patient{'s still need' if r.unplaced != 1 else ' still needs'} a bed.")
+        elif r.patients_moved:
+            lines.append(f"{r.city} can absorb its overflow{moved}, with {r.headroom} spare "
+                         f"bed{'s' if r.headroom != 1 else ''} left.")
+        else:
+            lines.append(f"{r.city} needs no transfers ({r.headroom} spare bed{'s' if r.headroom != 1 else ''}).")
+    return lines
 
 
 # --------------------------------------------------------------------------- stand-in input

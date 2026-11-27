@@ -4,6 +4,9 @@ import pandas as pd
 import pytest
 
 from moshari.routing import (
+    beds_to_clear,
+    plain_summary,
+    with_surge,
     beds_from_forecast,
     estimate_bed_capacity,
     load_bed_capacity,
@@ -104,3 +107,34 @@ def test_capacity_from_onsite_data_is_in_the_documented_range():
 def _onsite_like(raw: pd.DataFrame) -> pd.DataFrame:
     """The bundled Phase 1 data plus a bed column at the onsite ratio, for tests that need history."""
     return raw.assign(hospital_beds_required=(raw["dengue_cases"] * 0.3).round())
+
+
+def test_surge_beds_round_down_and_reduce_deficit(two_cities):
+    alloc, cap = two_cities
+    surged = with_surge(pd.Series(cap), 50)
+    assert surged["AAA_Ward_01"] == 4 and surged["BBB_Ward_02"] == 3   # 3 * 1.5 -> 4, 2 * 1.5 -> 3
+    _, base, base_city = route_overflow(alloc, cap)
+    _, more, more_city = route_overflow(alloc, surged)
+    assert more["net_deficit"].sum() <= base["net_deficit"].sum()
+    assert beds_to_clear(base_city) == 1 and beds_to_clear(more_city) == 0
+    with pytest.raises(ValueError):
+        with_surge(pd.Series(cap), -10)
+
+
+def test_plain_summary_names_short_city_first(two_cities):
+    alloc, cap = two_cities
+    *_, cities = route_overflow(alloc, cap)
+    lines = plain_summary(cities)
+    assert lines[0].startswith("Alpha is 1 bed short")
+    assert "Beta needs no transfers" in lines[1]
+
+
+def test_routing_60_wards_is_fast(raw):
+    import time
+    cap = estimate_bed_capacity(_onsite_like(raw))
+    peak = raw.loc[raw.groupby("ward_id")["dengue_cases"].idxmax(), ["ward_id", "city", "dengue_cases"]]
+    alloc = beds_from_forecast(peak.rename(columns={"dengue_cases": "expected_cases"}))
+    start = time.perf_counter()
+    for _ in range(20):
+        route_overflow(alloc, cap)
+    assert (time.perf_counter() - start) / 20 < 0.05
