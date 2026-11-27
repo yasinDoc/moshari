@@ -382,6 +382,16 @@ def localize_figure(fig) -> None:
         ax.tickmode, ax.tickvals, ax.ticktext = "array", tickvals, ticktext
         ax.ticksuffix = None
         ax.tickprefix = None
+    # "x unified" hover draws its own title from the x value (English months, Latin digits); every
+    # line already carries its Bangla date, so the title becomes a plain word.
+    mode = L.hovermode or ""
+    if mode.endswith("unified"):
+        letter = mode[0]
+        for name in sorted(axis_names):
+            if name[0] == letter:
+                vals = _axis_values(fig, name)
+                dated = any(_is_date(v) for v in vals[:5])
+                L[name].unifiedhovertitle.text = core.t("Week" if dated else "Value", "bn")
 
 
 def bound(fn):
