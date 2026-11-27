@@ -69,7 +69,7 @@ It always fits one 160-character GSM-7 segment. If it would be longer, optional 
 Everything works. Forecasting, allocation, routing, the simulator and dispatch run locally from the saved model. The only page that calls the internet is Live outlook (Open-Meteo). With `MOSHARI_OFFLINE=1` or the sidebar **Offline mode** toggle it skips the request and shows the last cached weather, or a clear message if nothing is cached. Fonts fall back to system fonts.
 
 ### 19. How do you prove it?
-`tests/test_offline.py` blocks network sockets, so any HTTP call or DNS lookup fails the test. It then renders all 9 pages, runs the core pipeline and checks the weather cache. It runs in CI with the rest of the 999 tests.
+Three ways. `tests/test_offline.py` turns the kill switch on and blocks network sockets, so any HTTP call or DNS lookup fails the test, then renders all 9 pages and runs the core pipeline. `tests/test_offline_wifi_off.py` leaves the switch off and refuses every non-local connection, as with Wi-Fi off, and checks that only Live outlook tries the internet and falls back cleanly. Both run in CI with the rest of the 1013 tests. And `python scripts/offline_check.py` starts the real app with the internet cut off and prints "OFFLINE CHECK: 9/9 pages OK". The by-hand steps for the judges are in [offline_check.md](offline_check.md).
 
 ## Forecast accuracy and validation
 

@@ -35,8 +35,8 @@ Phase 2, on the demo week (forecast issued 2 June 2025, 3 weeks ahead):
 | Hospital overflow | Never crosses a city, checked on 150 random three-city weeks. The demo week has spare beds in every city, so nothing moves; in the busy week of 7 Aug 2023, 2 patients move (one within Dhaka North, one within Dhaka South) and 5 are reported unplaced |
 | 30 spraying crews, placed by the simulator | **48 fewer cases** at 3 weeks (399 to 351), about 14 beds and 114 saline bags saved |
 | Dispatch notices | **26** High-risk wards, each with an SMS of 160 characters or fewer, a WhatsApp message and a one-page brief, in [`exports/`](exports/) |
-| Offline | All **9** pages render with network sockets blocked (`tests/test_offline.py`) |
-| Tests | **999** passing |
+| Offline | All **9** pages render with the internet cut off, with and without the kill switch (`tests/test_offline.py`, `tests/test_offline_wifi_off.py`); only Live outlook ever tries to go online |
+| Tests | **1013** passing |
 
 **Try it live:** https://moshari-sa5dxzxydg98ej4umhvbst.streamlit.app/ (free hosting sleeps when idle; the first visit can take about 30 seconds to wake)
 
@@ -102,7 +102,7 @@ Optional:
 
 ```bash
 python scripts/train.py            # retrain and re-evaluate (about 2 minutes on a laptop CPU)
-pip install -r requirements-dev.txt && pytest   # 999 tests
+pip install -r requirements-dev.txt && pytest   # 1013 tests
 docker build -t moshari . && docker run -p 8501:8501 moshari
 ```
 
@@ -155,7 +155,7 @@ $env:MOSHARI_OFFLINE = "1"; .venv\Scripts\streamlit run app.py      # Windows Po
 MOSHARI_OFFLINE=1 .venv/bin/streamlit run app.py                     # macOS / Linux
 ```
 
-You can also turn on **Offline mode** in the sidebar while the app is running. `pytest tests/test_offline.py` blocks network sockets and renders all 9 pages to prove it.
+You can also turn on **Offline mode** in the sidebar while the app is running. To prove it, `python scripts/offline_check.py` starts the real app with the internet cut off and checks all 9 pages (add `--switch` to test with the kill switch on), and `pytest tests/test_offline.py tests/test_offline_wifi_off.py` does the same inside the test suite. [docs/offline_check.md](docs/offline_check.md) has the Wi-Fi-off steps to show the judges and the result of our last run.
 
 ## The onsite dataset
 
@@ -226,13 +226,13 @@ moshari/
 │   ├── dispatch.py         # SMS, WhatsApp and commissioner brief templates
 │   ├── dispatch_pdf.py     # the brief as a PDF (reportlab)
 │   └── api.py              # FastAPI REST layer
-├── scripts/                # train.py, fetch_data.py, export_dispatch.py
+├── scripts/                # train.py, fetch_data.py, export_dispatch.py, offline_check.py
 ├── models/                 # serialized model bundle
 ├── artifacts/              # metrics.json, backtest.parquet
 ├── data/raw/               # dengue.csv (challenge data), dengue_onsite.csv (with demand)
 ├── exports/                # sample SMS, WhatsApp and brief files for the demo week
 ├── tests/                  # pytest suite
-└── docs/                   # screenshots, demo and video scripts, Q&A prep, testing guide
+└── docs/                   # screenshots, demo and video scripts, Q&A prep, testing and offline guides
 ```
 
 ## Team
