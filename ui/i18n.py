@@ -286,6 +286,14 @@ def _translate_seq(v: list) -> list:
     return [core.tr(x, "bn") if isinstance(x, str) else x for x in v]
 
 
+def _lookup(template: str) -> str:
+    """A Plotly template in Bangla: through the catalog, unless it is already Bangla or has no words."""
+    words = re.sub(r"%\{[^}]*\}|<[^>]*>", "", template)
+    if _BENGALI.search(template) or not re.search(r"[A-Za-z]", words):
+        return template
+    return core.t(template, "bn")
+
+
 def localize_figure(fig) -> None:
     """Rewrite a finished figure in place for Bangla mode. Does nothing in English."""
     if not is_bn():
@@ -315,8 +323,8 @@ def localize_figure(fig) -> None:
                 body = _EXTRA.sub("", template)
                 extra = _EXTRA.search(template)
                 extra_txt = extra.group(0)[7:-8] if extra else None
-                bn_body = body if _BENGALI.search(body) else core.t(body, "bn")   # already Bangla
-                bn_extra = core.t(extra_txt, "bn") if extra_txt else ""
+                bn_body = _lookup(body)
+                bn_extra = _lookup(extra_txt) if extra_txt else ""
             else:
                 bn_body = ("%{fullData.name}<br>" if name else "") + "%{x}: %{y}" if tr_.type != "heatmap" \
                     else "%{x}, %{y}: %{z}"
@@ -331,7 +339,7 @@ def localize_figure(fig) -> None:
         texttemplate = getattr(tr_, "texttemplate", None)
         text = getattr(tr_, "text", None)
         if texttemplate:
-            bn_tt = core.t(texttemplate, "bn")
+            bn_tt = _lookup(texttemplate)
             tr_.text = _map_2d(pts, two_d, lambda p, _t=bn_tt: _render(_t, p, ""))
             tr_.texttemplate = "%{text}"
         elif text is not None:
