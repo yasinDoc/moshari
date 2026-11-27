@@ -151,7 +151,7 @@ def to_weekly(daily: pd.DataFrame, today: pd.Timestamp | None = None) -> pd.Data
     """
     today = pd.Timestamp(today or pd.Timestamp.now(tz="Asia/Dhaka").date()).normalize()
     d = daily.copy()
-    d["date"] = d["day"] - pd.to_timedelta(d["day"].dt.weekday, unit="D")
+    d["date"] = d["day"] - pd.to_timedelta(d["day"].dt.day_of_week, unit="D")
     d["observed"] = d["day"] <= today
     agg = d.groupby(["city", "date"]).agg(
         rainfall_mm=("rainfall_mm", "sum"),

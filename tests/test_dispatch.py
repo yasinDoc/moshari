@@ -38,11 +38,11 @@ def test_sms_matches_brief_example():
     assert D.gsm_length(text) <= 160
 
 
-@pytest.mark.parametrize("tier,cases,outs,ins,unplaced,crews", itertools.product(
+@pytest.mark.parametrize("tier,cases,outs,ins,unplaced,crews", list(itertools.product(
     ["Low", "Critical"], [0.2, 9.6, 1234.0],
     [[], [("DNCC_Ward_03", 4), ("DNCC_Ward_07", 2), ("DNCC_Ward_41", 11)]],
     [[], [("DNCC_Ward_01", 3)]], [0, 25], [(0, 0), (1, 9)],
-))
+)))
 def test_sms_always_fits_one_segment(tier, cases, outs, ins, unplaced, crews):
     got, need = crews
     row = make_row(tier=tier, expected_cases=cases, transfers_out=outs, transfers_in=ins, net_deficit=unplaced,
