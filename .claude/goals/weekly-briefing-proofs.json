@@ -1,0 +1,149 @@
+{
+  "goal": "weekly-briefing",
+  "proofs": [
+    {
+      "criterion": "1",
+      "kind": "target",
+      "command": "{python} .claude/goals/weekly-briefing-verify.py logic",
+      "expect_regex": "(?m)^PASS logic",
+      "timeout": 900,
+      "catches": "wrong stock or bed source, Hospital vs Dispatch routing mixed up, city filter ignored, hard-coded demo numbers, wrong plural or sentence branch, missing 'All wards supplied', network or streamlit import in the logic module"
+    },
+    {
+      "criterion": "2",
+      "kind": "target",
+      "command": "{python} .claude/goals/weekly-briefing-verify.py pdf",
+      "expect_regex": "(?m)^PASS pdf",
+      "timeout": 900,
+      "catches": "two pages, not A4, compressed or image-only text, non-deterministic bytes, static/copied PDF for every setting, missing decision sentence, section, top ward or transfer"
+    },
+    {
+      "criterion": "3",
+      "kind": "target",
+      "command": "{python} .claude/goals/weekly-briefing-verify.py page",
+      "expect_regex": "(?m)^PASS page",
+      "timeout": 900,
+      "catches": "Overview strip missing, stale or at other settings; Overview cards removed; page not in app.py; page crashing on an empty week; button serving HTML, a deferred callable or a different scenario; wrong file name"
+    },
+    {
+      "criterion": "4",
+      "kind": "target",
+      "command": "{python} .claude/goals/weekly-briefing-verify.py tests && {python} -m pytest tests/test_briefing.py tests/test_briefing_page.py -o addopts=\"\" -q -rs",
+      "expect_regex": "(?m)^(?:1[3-9]|[2-9]\\d|\\d{3,}) passed in ",
+      "timeout": 900,
+      "catches": "missing, too few, hollow (no assert) or skipped tests; tests not touching the PDF, alert_text, build, the transfer week or the empty week; page tests without AppTest"
+    },
+    {
+      "criterion": "5",
+      "kind": "invariant",
+      "command": "{python} -m pytest -o addopts=\"\" -q",
+      "timeout": 1200
+    },
+    {
+      "criterion": "6",
+      "kind": "target",
+      "command": "{python} .claude/goals/weekly-briefing-verify.py git",
+      "expect_regex": "(?m)^PASS git",
+      "catches": "work uncommitted, commit without prefix or not authored by Ananya, files outside SCOPE (existing tests, engines, other pages), app.py or requirements.txt changed beyond one added line, Overview rewritten"
+    }
+  ],
+  "counters": [
+    {
+      "name": "tests",
+      "command": "{python} -m pytest --co -q -o addopts=\"\"",
+      "regex": "(\\d+) tests? collected",
+      "rule": "no_decrease"
+    }
+  ],
+  "pinned": [
+    {
+      "path": ".claude/goals/weekly-briefing-design.md",
+      "sha256": "091761fbfaecec4914c759579f9129c96ac1dc252a783d745419384121b59518"
+    },
+    {
+      "path": ".claude/goals/weekly-briefing-verify.py",
+      "sha256": "6a4428b31fa36187d3fb34caa4ca63bb47b2b0e8f70d439b689c05137599d873"
+    },
+    {
+      "path": "src/moshari/allocation.py",
+      "sha256": "8246b3ff4b7262197e551b68cdbaf0a7a224f788ba8826d08d792e9d577b5add"
+    },
+    {
+      "path": "src/moshari/routing.py",
+      "sha256": "fac3a76a3639dcc51cd92f603524cd253ded95f56601773e1f73776f02299f29"
+    },
+    {
+      "path": "src/moshari/simulation.py",
+      "sha256": "5120edc9fee90150a3d8016e1cfd9f6527e9481970f143f3422708878978494b"
+    },
+    {
+      "path": "src/moshari/dispatch.py",
+      "sha256": "5a3fb9503dc0544522af5ec1c44fa42fbc59ccb4e9281cb62b96ec743a00cb60"
+    },
+    {
+      "path": "src/moshari/dispatch_pdf.py",
+      "sha256": "c2365e2bc549ef23fbd1f9e153d285ab60e6981d81f7811e394ed3099450bf69"
+    },
+    {
+      "path": "src/moshari/service.py",
+      "sha256": "bdebbe7d9d8945bd3a23225d98361ce70cef2496df917d76103cec9d4a980b26"
+    },
+    {
+      "path": "src/moshari/model.py",
+      "sha256": "9f3837a36d254d9e9a990d5327fc440095456b042369bdf5a99bc833eda4317c"
+    },
+    {
+      "path": "src/moshari/risk.py",
+      "sha256": "5238054e9bd5dcbd63635ab8d2e5ea2965d003866bf610c29c48b94dcd819c91"
+    },
+    {
+      "path": "src/moshari/data.py",
+      "sha256": "f2a43b5ec1f3f5bd3b23ef391c7bfc0ef67abb1b4e5c391a3f9ef2a936e43dba"
+    },
+    {
+      "path": "src/moshari/config.py",
+      "sha256": "9433e79e7841aabdb546cc447f7525a7a44de935444be0801cfadebca500d8c6"
+    },
+    {
+      "path": "ui/state.py",
+      "sha256": "1acef4d55267bf3eaf804b7abd45d9eec8f83c9e7bd635d7dc33b3463a1b84dd"
+    },
+    {
+      "path": "ui/components.py",
+      "sha256": "cf90cf2161525de077488fbc27ebac480b9da01b87e269419cac1b9c5490203a"
+    },
+    {
+      "path": "ui/views/resources.py",
+      "sha256": "3476a3e08eb0c90f52c3175e4755803427984fabe93f77d5d027049ce8d07e4c"
+    },
+    {
+      "path": "ui/views/hospital.py",
+      "sha256": "87b91ad17a8b039bbcc83575abdbcca60d2c4d825ebeef6c458c80fbcf97b1b0"
+    },
+    {
+      "path": "ui/views/dispatch.py",
+      "sha256": "aa001c19aa5ece55776c19718c9d76b8b88b85aedebb08b369391731cc1e4c69"
+    },
+    {
+      "path": "ui/views/simulator.py",
+      "sha256": "207bbeabe52aab44d3ea2de55e46ef7ca475dafbe3159af93def64a2cd21b917"
+    },
+    {
+      "path": "tests/conftest.py",
+      "sha256": "d045c59f66751f418f7df15e066bd2aa6edd3c659f345587870880a1e0a2d6d9"
+    },
+    {
+      "path": "data/",
+      "sha256": "d9a6817d3626b00a7d50ee6d515813d7ad1bca4b1a44ba27ad5482e57d8d176d"
+    },
+    {
+      "path": "models/",
+      "sha256": "589ab2dca99d499f0ff7cffaff88f7c8213ee0327bec578cf85833beeaab056e"
+    }
+  ],
+  "sample": {
+    "glob": "ui/views/briefing.py",
+    "n": 1,
+    "lines": 60
+  }
+}
