@@ -219,18 +219,17 @@ def _axis_values(fig, axis_name: str) -> list:
                 out += vals
             continue
         if tr_.type == "bar":
-            out.append(0)
             other = _seq(getattr(tr_, "y" if letter == "x" else "x", None)) or []
             horizontal = getattr(tr_, "orientation", None) == "h"
             value_axis = (letter == "x") == bool(horizontal)
+            if value_axis:
+                out.append(0)
             if stacked and value_axis:
                 for k, v in zip(other, vals):
                     if _is_num(v):
                         stacks[str(k)] = stacks.get(str(k), 0) + float(v)
                 continue
         out += [v for v in vals if v is not None]
-        for key in ("error_y", "error_x"):
-            pass
     out += list(stacks.values())
     return out
 
@@ -389,3 +388,62 @@ def bound(fn):
     call them later, outside this script run)."""
     lng = lang()
     return lambda v: fn(v, lng)
+
+
+# --------------------------------------------------------------------------- tables in Bangla
+def _cell_text(v: Any, spec: str | None) -> Any:
+    if v is None or (isinstance(v, float) and math.isnan(v)) or v is pd.NaT:
+        return ""
+    if isinstance(v, (bool, np.bool_)):
+        return core.t("Yes" if v else "No", "bn")
+    if isinstance(v, (pd.Timestamp, np.datetime64)):
+        return core.week(v, "bn")
+    if _is_num(v):
+        v = _plain(v)
+        if spec is None:
+            spec = "d" if float(v).is_integer() and isinstance(v, int) else ".2f"
+        return core.digits(format(v, spec))
+    if isinstance(v, str):
+        return core.tr(v, "bn")
+    return v
+
+
+def frame(df: pd.DataFrame, column_config: dict | None = None,
+          formats: dict[str, str] | None = None) -> tuple[pd.DataFrame, dict | None]:
+    """``(df, column_config)`` for ``st.dataframe`` in the current language.
+
+    English returns both unchanged. Bangla returns the same rows and columns with the headers
+    through the catalog and every cell as Bangla text (numbers formatted with ``formats[col]``,
+    a Python format spec), so the browser never draws a Latin digit. Column help texts are
+    kept, translated, on plain text columns.
+    """
+    if not is_bn():
+        return df, column_config
+    formats = formats or {}
+    out = pd.DataFrame(index=df.index)
+    cfg: dict = {}
+    for c in df.columns:
+        label = core.tr(c, "bn")
+        out[label] = [_cell_text(v, formats.get(c)) for v in df[c]]
+        old = (column_config or {}).get(c)
+        if old is not None:
+            old = dict(old)
+            keep = {k: old[k] for k in ("width", "pinned") if old.get(k) is not None}
+            if old.get("help"):
+                keep["help"] = core.t(old["help"], "bn")
+            cfg[label] = st.column_config.TextColumn(label, **keep)
+    return out, cfg or None
+
+
+def deficit_note(r) -> str:
+    """Allocation status of one ward (``moshari.allocation.allocate`` row) in the current language."""
+    if not is_bn():
+        return r["deficit_note"]
+    names = (("saline_bags_needed", "saline_bags_allocated", "স্যালাইন ব্যাগ"),
+             ("diagnostic_kits_needed", "diagnostic_kits_allocated", "টেস্ট কিট"),
+             ("hospital_beds_required", "hospital_beds_allocated", "শয্যা"))
+    short = [f"{core.digits(int(r[n] - r[a]))}টি {label}" for n, a, label in names if r[a] < r[n]]
+    gap = int(r["crews_needed"] - r["crews_assigned"])
+    parts = ([f"ঘাটতি: {', '.join(short)}"] if short else []) + (
+        [f"আরও {core.digits(gap)}টি দল দরকার"] if gap > 0 else [])
+    return "; ".join(parts) if parts else "পুরো সরবরাহ পাওয়া গেছে"

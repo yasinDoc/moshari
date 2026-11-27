@@ -34,6 +34,7 @@ MONTHS_BN = ("জানুয়ারি", "ফেব্রুয়ারি",
              "অক্টোবর", "নভেম্বর", "ডিসেম্বর")
 TIER_BN = {"Low": "নিম্ন", "Medium": "মাঝারি", "High": "উচ্চ", "Critical": "সংকটজনক"}
 _WARD_LABEL = re.compile(r"^(DNCC|DSCC|CCC|GCC|NCC) Ward (\d+)$")
+_BENGALI = re.compile(r"[\u0980-\u09FF]")
 _NUMBER_ONLY = re.compile(r"^[\s\d.,%+\-−–:/()×~<>≥≤]*$")
 
 
@@ -130,6 +131,8 @@ def tr(text: Any, lang: str = "en") -> str:
     """Translate a finished display value: a ward label, a number, or a catalog text."""
     s = str(text)
     if norm(lang) != "bn":
+        return s
+    if _BENGALI.search(s):                      # already Bangla (translated earlier)
         return s
     m = _WARD_LABEL.match(s)
     if m:

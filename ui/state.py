@@ -86,11 +86,11 @@ def backtest() -> pd.DataFrame:
 
 
 def fmt_week(d) -> str:
-    return pd.Timestamp(d).strftime("%d %b %Y")
+    return i18n.week(d)
 
 
 def fmt_short(d) -> str:
-    return pd.Timestamp(d).strftime("%d %b")
+    return i18n.short(d)
 
 
 @st.cache_data(show_spinner=False, max_entries=16)

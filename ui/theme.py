@@ -356,7 +356,13 @@ def icon(name: str) -> str:
 
 def badge(tier: str, text: str | None = None) -> str:
     return (f'<span class="m-badge" style="background:{TIER_COLORS[tier]};color:{TIER_TEXT[tier]}">'
-            f'{text or tier}</span>')
+            f'{text or _tr(tier)}</span>')
+
+
+def _tr(text: str) -> str:
+    from ui.i18n import tr
+
+    return tr(text)
 
 
 def header(title: str, subtitle: str, chips: list[tuple[str, str, str]] | None = None) -> None:
