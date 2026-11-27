@@ -210,3 +210,69 @@ def scenario(body: ScenarioIn) -> list[WardForecast]:
         )
         for _, r in out.iterrows()
     ]
+
+
+# --------------------------------------------------------------------------- Phase 2: operations
+class AllocationOut(BaseModel):
+    issue_date: date
+    horizon_weeks: int
+    stock_pct: float
+    total_crews: int
+    summary: dict
+    wards: list[dict]
+
+
+@app.get("/allocation", response_model=AllocationOut)
+def allocation(
+    issue_date: Optional[date] = None,
+    horizon: int = Query(3, description="Weeks ahead: 2, 3 or 4"),
+    stock_pct: float = Query(1.0, ge=0.3, le=1.0, description="Available regional stock, 0.3 to 1.0 of demand"),
+    total_crews: int = Query(40, ge=0, le=1000),
+    plan_for: str = Query("expected", description="expected or upper (upper end of the 80% range)"),
+    city: Optional[str] = None,
+) -> AllocationOut:
+    """Constrained supply and crew allocation (saline, kits, beds, crews) with deficit flags."""
+    from . import allocation as A
+
+    if plan_for not in ("expected", "upper"):
+        raise HTTPException(422, "plan_for must be 'expected' or 'upper'")
+    issue, h = _issue(issue_date), _horizon(horizon)
+    fc = service().forecast_all(issue, h, [city] if city else None)
+    alloc = A.allocate(fc, service().wards, stock_pct, total_crews, plan_for)
+    cols = [C.WARD_COL, C.CITY_COL, "tier", "planned_cases", "priority_rank", "priority_score",
+            *[c for trio in A.RESOURCES for c in trio[:2]], "crews_needed", "crews_assigned",
+            "fill_rate", "deficit_flag", "deficit_note"]
+    rows = alloc[cols].round(3).to_dict(orient="records")
+    return AllocationOut(issue_date=issue.date(), horizon_weeks=h, stock_pct=stock_pct, total_crews=total_crews,
+                         summary=A.summarize(alloc, total_crews), wards=rows)
+
+
+class SimulationIn(BaseModel):
+    issue_date: Optional[date] = None
+    total_crews: int = Field(30, ge=0, le=1000)
+    per_crew: float = Field(0.20, gt=0, le=0.5, description="Share of remaining breeding pressure one crew removes")
+    max_per_ward: int = Field(4, ge=1, le=6)
+    plan: Optional[dict[str, int]] = Field(None, description="ward_id -> crews; omit for the recommended plan")
+
+
+@app.post("/simulate")
+def simulate(body: SimulationIn) -> dict:
+    """Vector-control counterfactual: cases, beds and saline saved at 2–4 weeks, ROI per ward."""
+    from . import simulation as S
+
+    issue = _issue(body.issue_date)
+    table = S.build_effect_table(service(), issue, body.per_crew)
+    plan = body.plan if body.plan is not None else S.recommend(table, body.total_crews, body.max_per_ward)
+    unknown = [w for w in plan if w not in set(table.wards[C.WARD_COL])]
+    if unknown:
+        raise HTTPException(404, f"Unknown ward_id(s): {', '.join(unknown)}")
+    by_ward, by_h = S.simulate(table, plan)
+    used = by_ward[by_ward["crews"] > 0].sort_values("roi", ascending=False)
+    return {
+        "issue_date": issue.date().isoformat(),
+        "plan": plan,
+        "crews_used": int(by_ward["crews"].sum()),
+        "by_horizon": by_h.round(2).to_dict(orient="records"),
+        "wards": used[[C.WARD_COL, C.CITY_COL, "tier", "crews", "cases_prevented", "roi", "next_crew_gain"]]
+        .round(3).to_dict(orient="records"),
+    }

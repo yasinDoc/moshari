@@ -49,3 +49,19 @@ def test_alerts_only_and_policy():
                                           "alert_policy": "Standard"}).json()
     assert all(r["alert"] for r in cau) and len(cau) >= len(std)
     assert client.get("/forecast", params={"alert_policy": "Reckless"}).status_code == 422
+
+
+def test_allocation_endpoint_flags_deficits_under_scarcity():
+    full = client.get("/allocation", params={"issue_date": "2025-06-02", "stock_pct": 1.0}).json()
+    scarce = client.get("/allocation", params={"issue_date": "2025-06-02", "stock_pct": 0.4}).json()
+    assert full["summary"]["deficit_wards"] == 0 and len(full["wards"]) == 60
+    assert scarce["summary"]["deficit_wards"] > 0
+    assert client.get("/allocation", params={"stock_pct": 0.1}).status_code == 422
+
+
+def test_simulate_endpoint_recommends_and_scores_plans():
+    rec = client.post("/simulate", json={"issue_date": "2025-06-02", "total_crews": 20}).json()
+    assert rec["crews_used"] == 20 and sum(r["cases_prevented"] for r in rec["by_horizon"]) > 0
+    custom = client.post("/simulate", json={"issue_date": "2025-06-02", "plan": {"DNCC_Ward_12": 2}}).json()
+    assert custom["crews_used"] == 2
+    assert client.post("/simulate", json={"plan": {"NOPE": 1}}).status_code == 404

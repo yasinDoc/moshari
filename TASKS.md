@@ -102,8 +102,8 @@ File: `src/moshari/simulation.py`, plus a new page `ui/views/simulator.py`.
 - [x] **ROI ranking:** cases prevented per crew, with a "best next crew" suggestion.
 
 ### Y4. Offline resilience and integration (module 5, 15 pts)
-- [ ] Check that every page and module runs with WiFi off. Live outlook already falls back to cached weather; make sure nothing else calls the internet.
-- [ ] Add an "Offline mode" indicator, and an `MOSHARI_OFFLINE=1` switch that skips Open-Meteo entirely.
+- [x] Check that every page and module runs with WiFi off (automated: `tests/test_offline.py`). Live outlook already falls back to cached weather; make sure nothing else calls the internet.
+- [x] Add an "Offline mode" indicator, and an `MOSHARI_OFFLINE=1` switch that skips Open-Meteo entirely (plus a live sidebar toggle).
 - [ ] Add the new pages to the sidebar in `app.py`, merge everyone's pull requests and keep CI green.
 - [ ] Redeploy on Streamlit Cloud and check the live URL works.
 
