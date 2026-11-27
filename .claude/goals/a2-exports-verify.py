@@ -184,7 +184,9 @@ def git_mode() -> None:
     anc = subprocess.run(["git", "merge-base", "--is-ancestor", BASE, "HEAD"], cwd=ROOT).returncode == 0
     check(anc, f"HEAD descends from {BASE}")
     subjects = [s for s in git("log", "--no-merges", "--format=%s", f"{BASE}..HEAD").splitlines() if s]
-    check(len(subjects) >= 1, f"{len(subjects)} new commit(s) since {BASE}")
+    work = [s for s in git("log", "--no-merges", "--format=%s", f"{BASE}..HEAD", "--", ".",
+                            ":(exclude).claude").splitlines() if s]
+    check(len(work) >= 1, f"{len(work)} new commit(s) since {BASE} that change files outside .claude/")
     bad = [s for s in subjects if not s.startswith(PREFIX)]
     check(not bad, f"every new commit starts with '{PREFIX}' (bad: {bad[:3]})")
     changed = [f for f in git("diff", "--name-only", f"{BASE}..HEAD").splitlines() if f]
