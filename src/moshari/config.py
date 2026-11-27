@@ -6,6 +6,7 @@ dashboard can never drift apart.
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 # --------------------------------------------------------------------------- #
@@ -93,3 +94,12 @@ TIER_NAMES = ("Low", "Medium", "High", "Critical")
 TIER_QUANTILES = (0.70, 0.85, 0.95)  # lower bounds of Medium / High / Critical
 
 RANDOM_SEED = 42
+
+
+def offline() -> bool:
+    """True when ``MOSHARI_OFFLINE`` is set: no network calls at all (judging kill switch).
+
+    Forecasting, allocation, routing, simulation and dispatch templates never need
+    the network; this only stops the optional Open-Meteo request on Live outlook.
+    """
+    return os.environ.get("MOSHARI_OFFLINE", "").strip().lower() in {"1", "true", "yes", "on"}
