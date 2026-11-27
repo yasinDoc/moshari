@@ -31,6 +31,7 @@ Exit codes: 0 written, 1 nothing to write or writing failed, 2 invalid settings.
 from __future__ import annotations
 
 import argparse
+import functools
 import os
 import shutil
 import sys
@@ -75,6 +76,12 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
                    help="PDF briefs: top (highest-priority ward + all_briefs.pdf, default), all, none")
     p.add_argument("--require-pdf", action="store_true", help="fail instead of warning when PDFs can't be made")
     return p.parse_args(argv)
+
+
+@functools.lru_cache(maxsize=1)
+def load_service() -> ForecastService:
+    """The bundled dataset and trained model (cached, so tests can call main() repeatedly)."""
+    return ForecastService(load_dataset(), ForecastBundle.load())
 
 
 def build_rows(svc: ForecastService, issue: pd.Timestamp, horizon: int, stock: float, crews: int,
@@ -210,7 +217,7 @@ def main(argv: list[str] | None = None) -> int:
             stream.reconfigure(encoding="utf-8", errors="replace")
     args = parse_args(argv)
     try:
-        svc = ForecastService(load_dataset(), ForecastBundle.load())
+        svc = load_service()
         issue = resolve_settings(args, svc)
         rows = build_rows(svc, issue, args.horizon, args.stock / 100, args.crews, args.select)
         if not rows:
