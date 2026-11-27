@@ -1,4 +1,6 @@
-# Moshari voiceover
+# Moshari voiceover (round one)
+
+> Kept for the record: preliminary-round voiceover. The onsite final uses [video_script.md](video_script.md).
 
 **Target length:** about 50 seconds.
 

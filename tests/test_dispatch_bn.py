@@ -79,10 +79,10 @@ def test_sms_carries_the_same_facts_in_bangla():
     assert B.sms_parts(text)[0] == "Unicode" and B.sms_parts(text)[2] <= B.BN_SMS_PARTS
 
 
-@pytest.mark.parametrize("tier, deficit, crews, outs, ins, unplaced", itertools.product(
+@pytest.mark.parametrize("tier, deficit, crews, outs, ins, unplaced", list(itertools.product(
     list(TIERS), [False, True], [None, (1, 1), (0, 4)],
     [[], [("DNCC_Ward_03", 2)], [("DSCC_Ward_10", 1), ("DNCC_Ward_44", 3)]],
-    [[], [("DNCC_Ward_05", 1)]], [0, 7]))
+    [[], [("DNCC_Ward_05", 1)]], [0, 7])))
 def test_sms_never_exceeds_two_parts_and_keeps_the_essentials(tier, deficit, crews, outs, ins, unplaced):
     row = make_row(tier=tier, tier_idx=list(TIERS).index(tier), expected_cases=123.4,
                    saline_bags_needed=1234, saline_bags_allocated=600 if deficit else 1234,

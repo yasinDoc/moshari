@@ -1,4 +1,6 @@
-# 3-minute demo script
+# 3-minute demo script (round one)
+
+> Kept for the record: this is the preliminary-round script. The onsite final uses [video_script.md](video_script.md).
 
 One uncut take: screen and voice, no slides, no edits. Rehearse until it fits in 2:45, so there's slack.
 

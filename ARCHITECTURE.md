@@ -30,7 +30,8 @@ flowchart LR
     G -->|"simulation boosters"| S["Crew simulator<br/>(simulation.py)"]
     J --> S
     R --> X[("exports/<br/>export_dispatch.py")]
-    P & Q & S & R --> K
+    P & Q & S & R --> W["Weekly briefing (briefing.py)<br/>one decision, one-page PDF"]
+    P & Q & S & R & W --> K
 ```
 
 `src/moshari/` holds the engine (`data`, `features`, `model`, `risk`, `evaluation`, `training`, `service`, `live`, and for Phase 2 `allocation`, `routing`, `simulation`, `dispatch`, `dispatch_pdf`); `ui/` holds the dashboard only. Neither the dashboard nor the API touches LightGBM directly. Both call `ForecastService`, so a fix reaches both at once.
@@ -106,6 +107,14 @@ Demand is rounded up, so it is never understated. The ratios are refitted from t
 **Crew simulator** (`simulation.py`). A crew removes breeding sites, so in the model it removes a share of the ward's recent breeding signal: rain 0–4 weeks back, the breeding window and heavy-rain weeks. The share is `effect(c) = min(0.75, 1 − (1 − 0.20)^c)` for `c` crews. One crew removes 20%, each extra crew helps less, and no amount of spraying removes more than 75%. Older rain has already produced its mosquitoes and is left alone. A separate LightGBM model per horizon re-scores the changed features. It has monotone constraints on rain, so a crew can never raise a forecast. Its hold-out MAE is 1.00, 1.06 and 1.23 at 2, 3 and 4 weeks, against 1.01, 1.03 and 1.19 for the main model. Only its proportional reduction is applied to the main forecast, so baselines match the rest of the app. The 20% is an assumption, not a measurement, because the data has no spraying records, so the Simulator page lets officers set it anywhere from 10% to 35%. Crews are placed greedily, each one where it prevents the most extra cases, and a crew that would prevent fewer than 0.1 cases is held back.
 
 **Dispatch** (`dispatch.py`, `dispatch_pdf.py`). String templates turn one row of allocation and routing into three formats. The SMS always fits one 160-character segment: optional details are dropped in a fixed order, never the risk, supplies or deficit. The other two are a WhatsApp message and a one-page A4 commissioner brief in HTML, and reportlab draws the same brief as a PDF. `scripts/export_dispatch.py` writes the demo week into `exports/`. `dispatch_bn.py` writes the same three notices in Bangla from the same row: Bangla digits and month names, ward codes kept in Latin letters to match system IDs. Bangla is outside the GSM-7 alphabet, so its SMS is Unicode (70 characters, or 67 per part when split); it is held to two parts and shortens wording before it drops an instruction, so patient transfers survive. The English templates are untouched.
+
+**Weekly briefing** (`briefing.py`, `briefing_pdf.py`). Calls the same engines the other pages use (allocation, routing, the simulator and dispatch) and reduces them to four sentences for a city health officer: wards at risk, crews to approve, supplies to release and patients to move, plus a table per city, the wards to visit first and the notices ready. reportlab draws it as a one-page A4 PDF, deterministically and offline. In Bangla the PDF uses the bundled Noto Sans Bengali font with HarfBuzz shaping (`uharfbuzz`), so joined letters print correctly.
+
+**Ward map** (`ui/wardmap.py`, `data/geo/ward_map.json`). `scripts/build_ward_map.py` was run once to turn geoBoundaries ward outlines (Bangladesh Bureau of Statistics and OCHA, CC BY 3.0 IGO) into a 29 KB JSON of SVG paths, so the page draws inline SVG with no tiles and no network. The dataset has no coordinates, so each ward is drawn on the real ward with the same number, and the page labels the placement as illustrative.
+
+**English / Bangla** (`src/moshari/i18n.py`, `src/moshari/locales/bn.json`, `ui/i18n.py`). Every dashboard string goes through one lookup against a JSON catalog, with Bangla digits and month names; a missing entry falls back to English rather than failing. The choice is kept in session state and in a `?lang=bn` link, and the Dispatch notices and the briefing PDF follow it.
+
+**Peak shortcut** (`ForecastService.peak_issue_date`). The sidebar's Peak button picks the issue week in the latest season whose forecast total, at the chosen horizon, is heaviest. It uses only the model's own forecast, so it needs no hindsight and works on an uploaded file.
 
 ## Offline design
 

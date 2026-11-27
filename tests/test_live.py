@@ -54,7 +54,7 @@ def test_weekly_aggregation_matches_training_weeks(tmp_path):
     daily, _ = live.fetch_daily(tmp_path, opener=FakeOpener(), cities=CITIES)
     w = live.to_weekly(daily, today=pd.Timestamp("2026-11-22"))
     full = w[w["complete"]]
-    assert (full["date"].dt.weekday == 0).all()          # Monday-start weeks
+    assert (full["date"].dt.day_of_week == 0).all()          # Monday-start weeks
     assert (full["rainfall_mm"] == 70.0).all()           # 7 days x 10 mm
     assert (full["avg_temp_c"] == 30.0).all()
 

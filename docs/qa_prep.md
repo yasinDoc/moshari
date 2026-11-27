@@ -69,7 +69,7 @@ It always fits one 160-character GSM-7 segment. If it would be longer, optional 
 Everything works. Forecasting, allocation, routing, the simulator and dispatch run locally from the saved model. The only page that calls the internet is Live outlook (Open-Meteo). With `MOSHARI_OFFLINE=1` or the sidebar **Offline mode** toggle it skips the request and shows the last cached weather, or a clear message if nothing is cached. Fonts fall back to system fonts.
 
 ### 19. How do you prove it?
-Three ways. `tests/test_offline.py` turns the kill switch on and blocks network sockets, so any HTTP call or DNS lookup fails the test, then renders all 11 pages and runs the core pipeline; `tests/test_briefing_page.py` also checks the Weekly briefing PDF offline. `tests/test_offline_wifi_off.py` leaves the switch off and refuses every non-local connection, as with Wi-Fi off, and checks that only Live outlook tries the internet and falls back cleanly. They run in CI with the rest of the 1374 tests. And `python scripts/offline_check.py` starts the real app with the internet cut off and prints "OFFLINE CHECK: 11/11 pages OK". The by-hand steps for the judges are in [offline_check.md](offline_check.md).
+Three ways. `tests/test_offline.py` turns the kill switch on and blocks network sockets, so any HTTP call or DNS lookup fails the test, then renders all 11 pages and runs the core pipeline; `tests/test_briefing_page.py` also checks the Weekly briefing PDF offline. `tests/test_offline_wifi_off.py` leaves the switch off and refuses every non-local connection, as with Wi-Fi off, and checks that only Live outlook tries the internet and falls back cleanly. They run in CI with the rest of the 1400 tests. And `python scripts/offline_check.py` starts the real app with the internet cut off and prints "OFFLINE CHECK: 11/11 pages OK". The by-hand steps for the judges are in [offline_check.md](offline_check.md).
 
 ## Forecast accuracy and validation
 
@@ -85,7 +85,24 @@ That's why we have separate outbreak-probability models. They catch 70% of Criti
 ### 23. Why LightGBM?
 The data is small and tabular: 31,320 rows and 33 features. A Poisson objective suits counts with many zeros, and LightGBM gives exact explanations through TreeSHAP and supports the monotone constraints the simulator needs.
 
+## Added during the final
+
+### 24. The Ward map: are those the real ward locations?
+The outlines are real (geoBoundaries, Bangladesh Bureau of Statistics and OCHA, CC BY 3.0 IGO), bundled in a 29 KB file with no map tiles, so the map works offline. The dataset has no coordinates, so each ward is drawn on the real ward with the same number; the page says the placement is illustrative. Gazipur and Narayanganj have no ward outlines in the source, so their wards are dots inside the city.
+
+### 25. The Weekly briefing and Resources rank a different ward first. Which is right?
+Both, for different jobs. "Send teams here first" uses the forecast alert order, the same as Overview: where risk is highest. Supplies use the Resources priority, which also weighs population density, because crowded wards spread dengue faster. The briefing card says which order it uses.
+
+### 26. Why is a Bangla SMS two parts?
+Bangla is outside the GSM-7 alphabet, so the SMS goes as Unicode: 70 characters in one message, 67 per part when split. No useful Bangla notice fits in 70, so we cap it at two parts (134 characters). The wording is compacted before any instruction is dropped, and the risk, supplies and shortages are never cut; tests check 288 extreme combinations and every ward on real weeks.
+
+### 27. How good is the Bangla, and can it be corrected?
+Every dashboard string lives in one catalog, `src/moshari/locales/bn.json`, so a Bangla reader can fix a wording without touching code. Digits and months are Bangla; ward codes (DNCC-W12) stay Latin so they match the IDs other systems use. The Bangla briefing PDF uses the bundled Noto Sans Bengali font with HarfBuzz shaping, so joined letters print correctly.
+
+### 28. How is the "Peak" week chosen?
+By the model, not by hindsight: it is the issue week in the latest season whose forecast total, at the chosen horizon, is heaviest (9 June 2025 at 3 weeks: 60 wards High, 80 patients without a bed). It works on an uploaded file too. "Early" is a few weeks before the latest season's peak, the default demo week.
+
 ## Process
 
-### 24. Did you use AI tools?
+### 29. Did you use AI tools?
 Yes, while building, and we disclose them in the README. We used exactly two: Claude Code and GitHub Copilot. Nothing in the running app calls an AI model.
