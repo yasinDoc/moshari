@@ -80,8 +80,8 @@ Yasin's allocation output is the input for Samiya's routing and Ananya's dispatc
 
 ### Y1. New dataset and model (first 1.5 hours)
 - [x] Download the onsite dataset to `data/raw/dengue_onsite.csv` and check its columns (see "The onsite dataset" above).
-- [ ] Update `config.py` and `data.validate()` for any new columns, and keep the old file working.
-- [ ] Retrain with `python scripts/train.py`, check the hold-out metrics, and commit the new model and `artifacts/`.
+- [x] ~~Update `config.py` and `data.validate()` for any new columns~~ Not needed: the onsite file adds only supply columns, used by allocation (`ONSITE_DATA_PATH`, `SUPPLY_COLS`); the forecast inputs are unchanged.
+- [x] ~~Retrain~~ Not needed: same forecast columns, so the round-one model (trained through 2023, tested on 2024–25) stands. The simulator's monotone models were added to the bundle.
 - [x] Share the real column names (done: see "The onsite dataset").
 
 ### Y2. Constrained resource allocation engine (module 1, 15 pts) ✅ done: `allocation.py`, Resources page
@@ -104,8 +104,8 @@ File: `src/moshari/simulation.py`, plus a new page `ui/views/simulator.py`.
 ### Y4. Offline resilience and integration (module 5, 15 pts)
 - [x] Check that every page and module runs with WiFi off (automated: `tests/test_offline.py`). Live outlook already falls back to cached weather; make sure nothing else calls the internet.
 - [x] Add an "Offline mode" indicator, and an `MOSHARI_OFFLINE=1` switch that skips Open-Meteo entirely (plus a live sidebar toggle).
-- [ ] Add the new pages to the sidebar in `app.py`, merge everyone's pull requests and keep CI green.
-- [ ] Redeploy on Streamlit Cloud and check the live URL works.
+- [x] Add the new pages to the sidebar in `app.py`, merge everyone's pull requests and keep CI green.
+- [x] Redeploy on Streamlit Cloud and check the live URL works.
 
 ### Y5. Video (10 pts)
 - [ ] Record one uncut take of about 7 minutes, with voiceover and no slides, covering all 5 modules. Ananya writes the script.
@@ -200,10 +200,10 @@ File: `src/moshari/dispatch.py`, plus a new page `ui/views/dispatch.py`.
 
 ## Done means
 
-- [ ] All 5 modules work in the app and on the live URL
-- [ ] The app runs with WiFi off, with no crashes
-- [ ] The `exports/` folder has SMS, WhatsApp and printable brief samples
-- [ ] ARCHITECTURE.md, README and the AI disclosure are updated
+- [x] All 5 modules work in the app and on the live URL
+- [x] The app runs with WiFi off, with no crashes
+- [x] The `exports/` folder has SMS, WhatsApp and printable brief samples
+- [x] ARCHITECTURE.md, README and the AI disclosure are updated
 - [ ] Every commit starts with `version-onsite-final:`, and all three of us have commits through the day
 - [ ] A 7-minute uncut video, recorded from the final commit
-- [ ] Tests pass and CI is green
+- [x] Tests pass and CI is green

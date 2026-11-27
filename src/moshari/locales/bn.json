@@ -625,5 +625,6 @@
   "{ward}: {tier} risk, {cases:.1f} expected cases, 80% range {lo:.1f} to {hi:.1f}": "{ward}: {tier} ঝুঁকি, প্রত্যাশিত রোগী {cases:.1f} জন, ৮০% সীমা {lo:.1f} থেকে {hi:.1f}",
   "{x:.1f} cases prevented per crew": "প্রতি দলে {x:.1f} জন রোগী প্রতিরোধ",
   "−{b:.1f} beds, −{s:.0f} saline bags": "−{b:.1f}টি শয্যা, −{s:.0f}টি স্যালাইন ব্যাগ",
-  "−{n:.0f} cases": "−{n:.0f} জন রোগী"
+  "−{n:.0f} cases": "−{n:.0f} জন রোগী",
+  "Highest forecast alert priority this week, as on Overview. Supplies follow the Resources ranking, which also weighs population density.": "এই সপ্তাহে পূর্বাভাসের সতর্কতার সর্বোচ্চ অগ্রাধিকার, সারসংক্ষেপ পাতার মতো। সরবরাহ সম্পদ পাতার ক্রম মেনে চলে, যেখানে জনঘনত্বও বিবেচনা করা হয়।"
 }

@@ -106,7 +106,9 @@ with left:
         })
         table, table_cfg = i18n.frame(table, formats={"Cases": "d", "Wards short": "d", "Moved": "d", "No bed": "d"})
         st.dataframe(table, hide_index=True, width="stretch", column_config=table_cfg)
-        theme.card_title(T("Send teams here first"), T("Highest alert priority this week."), T("Top {n}", n=5))
+        theme.card_title(T("Send teams here first"),
+                         T("Highest forecast alert priority this week, as on Overview. Supplies follow the "
+                           "Resources ranking, which also weighs population density."), T("Top {n}", n=5))
         rows = [
             f'<div class="m-row"><div class="n">{num(i)}</div>'
             f'<div><div class="w">{i18n.ward(r["ward_id"])} {theme.badge(r["tier"])}</div>'
