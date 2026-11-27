@@ -74,12 +74,13 @@ with left:
                           + T("Critical watch: outbreak-level cases are likely enough to prepare.") + '</p>')
         replay = ("" if np.isnan(main["actual"]) else
                   f'<p class="m-note" style="margin-top:8px">{T("Replay check: {n:.0f} cases were reported that week.", n=main["actual"])}</p>')
+        headline = T("<b>{e:.1f}</b> expected cases, likely between\n                    {lo:.1f} and {hi:.1f}.",
+                     e=main['expected_cases'], lo=main['lower_80'], hi=main['upper_80'])
         st.html(
             f"""<div class="m-hero">
                   <div class="k">{T("Week of {week}", week=state.fmt_week(main['target_date']))}</div>
                   <div class="tier" style="color:{tier.ink}">{T("{tier} risk", tier=tr(tier.name))}</div>
-                  <div class="num">{T("<b>{e:.1f}</b> expected cases, likely between\n                    {lo:.1f} and {hi:.1f}.",
-                                      e=main['expected_cases'], lo=main['lower_80'], hi=main['upper_80'])}{upside}</div>{probs}{early}{replay}
+                  <div class="num">{headline}{upside}</div>{probs}{early}{replay}
                   <div class="m-act"><div class="h">{theme.icon('task_alt')}{T(tier.action)}</div>
                     <div class="b">{T(tier.detail)}</div></div>
                 </div>"""

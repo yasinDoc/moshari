@@ -218,6 +218,8 @@ with st.container(key="card-details"):
     theme.card_title(T("Details"), T("How the data was split, how tiers compare, and which signals matter most."))
     t1, t2, t3 = st.tabs([T("Validation split"), T("Risk tiers"), T("Top signals")])
     with t1:
+        split_note = T("Split by the week being forecast, never at random, so no future\n"
+                       "            information leaks into training. The shipped model is refit on 2016 to 2023.")
         st.html(
             f"""<div class="m-steps">
               <div class="m-step"><div class="h">{T("Train")}</div><div class="c" style="font-size:22px">{T("2016 to 2022")}</div>
@@ -227,8 +229,7 @@ with st.container(key="card-details"):
               <div class="m-step on"><div class="h">{T("Test")}</div><div class="c" style="font-size:22px">{T("2024 and 2025")}</div>
                 <div class="r">{T("Scored once, never used for training")}</div></div>
             </div>
-            <p class="m-note" style="margin-top:16px">{T("Split by the week being forecast, never at random, so no future\n"
-            "            information leaks into training. The shipped model is refit on 2016 to 2023.")}</p>"""
+            <p class="m-note" style="margin-top:16px">{split_note}</p>"""
         )
     with t2:
         cm = pd.DataFrame(hm["confusion"]).reindex(index=C.TIER_NAMES, columns=C.TIER_NAMES).fillna(0)
