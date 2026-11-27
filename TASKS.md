@@ -117,17 +117,17 @@ File: `src/moshari/simulation.py`, plus a new page `ui/views/simulator.py`.
 
 ### S1. Hospital overflow routing (module 2, 10 pts)
 File: `src/moshari/routing.py`, plus a new page `ui/views/hospital.py`.
-- [ ] Take each ward's `hospital_beds_required` (from the allocation table) and its **bed capacity**. The dataset has none, so use each ward's 90th-percentile weekly `hospital_beds_required` over 2016–2023, as described in "The onsite dataset".
-- [ ] **Routing, strictly within the same city:**
+- [x] Take each ward's `hospital_beds_required` (from the allocation table) and its **bed capacity**. The dataset has none, so use each ward's 90th-percentile weekly `hospital_beds_required` over 2016–2023, as described in "The onsite dataset".
+- [x] **Routing, strictly within the same city:**
   - wards over capacity send patients to wards with spare beds
   - start with the least loaded ward, ideally the nearest if ward numbers or neighbours are available, and stop when the overflow is placed or the city runs out of beds
-- [ ] Never route between cities. Add a test for this.
-- [ ] Output the three tables from the interface section: transfers, ward summary, city summary.
-- [ ] **Page:**
+- [x] Never route between cities. Add a test for this.
+- [x] Output the three tables from the interface section: transfers, ward summary, city summary.
+- [x] **Page:**
   - per-city cards with total beds, required beds, utilisation % and headroom
   - a table of transfers ("move 6 patients from DNCC Ward 12 to DNCC Ward 3")
   - wards still in deficit after routing, shown in red
-- [ ] Commit at least once an hour with the `version-onsite-final:` prefix.
+- [x] Commit at least once an hour with the `version-onsite-final:` prefix.
 
 ### S2. Tests (shared quality)
 File: `tests/test_routing.py`, plus tests for Yasin's allocation in `tests/test_allocation.py`.
@@ -142,9 +142,9 @@ File: `tests/test_routing.py`, plus tests for Yasin's allocation in `tests/test_
   - crews add up to the total
 
 ### S3. Offline kill-switch check (supports module 5)
-- [ ] Turn WiFi off, restart the app and click through every page, including Live outlook, which should show its offline message.
-- [ ] Note anything that crashes and tell Yasin straight away.
-- [ ] Write the steps you followed into `docs/offline_check.md`, so we can repeat them in front of the judges.
+- [x] Turn WiFi off, restart the app and click through every page, including Live outlook, which should show its offline message.
+- [x] Note anything that crashes and tell Yasin straight away.
+- [x] Write the steps you followed into `docs/offline_check.md`, so we can repeat them in front of the judges.
 
 ---
 
