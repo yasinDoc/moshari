@@ -332,12 +332,20 @@ button[data-variant="segmented_control"][aria-checked="true"], [data-testid="stB
 """)
 
 
-def inject_css() -> None:
+# Bangla mode: Hind Siliguri for every weight used (offline it falls back to Noto Sans Bengali / Vrinda).
+_BN_FONTS = "https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700&display=swap"
+
+
+def inject_css(lang: str = "en") -> None:
+    bangla = lang == "bn"
+    font = f"{FONT_BN}, {FONT}" if bangla else FONT
     css = _CSS.substitute(
         BASE=BASE, BASE_HI=BASE_HI, LIGHT=LIGHT, SHADE=SHADE, INK=INK, INK_2=INK_2, MUTED=MUTED, LINE=LINE,
-        ACCENT=ACCENT, ACCENT_SOFT=ACCENT_SOFT, FONT=FONT, FONT_BN=FONT_BN, ICON_FONT=ICON_FONT,
+        ACCENT=ACCENT, ACCENT_SOFT=ACCENT_SOFT, FONT=font, FONT_BN=FONT_BN, ICON_FONT=ICON_FONT,
         CRIT=TIER_COLORS["Critical"],
     )
+    if bangla:
+        css = f"@import url('{_BN_FONTS}');\n" + css
     st.html(f"<style>{css}</style>")
 
 
@@ -348,7 +356,13 @@ def icon(name: str) -> str:
 
 def badge(tier: str, text: str | None = None) -> str:
     return (f'<span class="m-badge" style="background:{TIER_COLORS[tier]};color:{TIER_TEXT[tier]}">'
-            f'{text or tier}</span>')
+            f'{text or _tr(tier)}</span>')
+
+
+def _tr(text: str) -> str:
+    from ui.i18n import tr
+
+    return tr(text)
 
 
 def header(title: str, subtitle: str, chips: list[tuple[str, str, str]] | None = None) -> None:
@@ -378,9 +392,10 @@ def gap() -> None:
 
 
 def footer(meta: dict) -> None:
-    st.html(f'<div class="m-foot"><span>Moshari 1.0, ward-level dengue early warning</span>'
-            f'<span>Model trained through {meta.get("trained_through", "unknown")}, '
-            f'LightGBM {meta.get("lightgbm_version", "")}</span></div>')
+    from ui.i18n import t, tr
+
+    st.html(f'<div class="m-foot"><span>{t("Moshari 1.0, ward-level dengue early warning")}</span>'
+            f'<span>{t("Model trained through {date}, LightGBM {version}", date=tr(meta.get("trained_through", "unknown")), version=tr(meta.get("lightgbm_version", "")))}</span></div>')
 
 
 # --------------------------------------------------------------------------- plotly
@@ -410,5 +425,20 @@ PLOT_CONFIG = {"displayModeBar": False}
 
 
 def plot(fig: go.Figure, height: int) -> None:
+    from ui.i18n import localize_figure
+
     fig.update_layout(height=height)
+    # Name every axis a trace draws on, in both languages (``visible=True`` is Plotly's default, so
+    # nothing changes on screen); the Bangla version sets tick text on them and keeps the same axes.
+    present = {k for k in fig.layout.to_plotly_json() if k[1:5] == "axis"}
+    for tr_ in fig.data:
+        for letter in ("x", "y"):
+            if not hasattr(tr_, letter + "axis"):
+                continue
+            ref = getattr(tr_, letter + "axis") or letter
+            name = letter + "axis" + ref[1:]
+            if name not in present:
+                fig.layout[name].visible = True
+                present.add(name)
+    localize_figure(fig)
     st.plotly_chart(fig, width="stretch", config=PLOT_CONFIG, theme=None)

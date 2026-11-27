@@ -20,8 +20,10 @@ from moshari.data import file_fingerprint, load_dataset
 from moshari.model import ForecastBundle
 from moshari.risk import ALERT_POLICIES, DEFAULT_ALERT_POLICY
 from moshari.service import ForecastService
+from ui import i18n
 
 BUNDLED = "bundled"
+T = i18n.t
 
 
 @st.cache_resource(show_spinner="Loading the forecast model…")
@@ -55,7 +57,7 @@ def use_bundled() -> None:
 
 
 def data_name() -> str:
-    return st.session_state.get("data_name", "Challenge dataset (bundled)")
+    return st.session_state.get("data_name", T("Challenge dataset (bundled)"))
 
 
 @st.cache_data(show_spinner=False, max_entries=256)
@@ -84,11 +86,11 @@ def backtest() -> pd.DataFrame:
 
 
 def fmt_week(d) -> str:
-    return pd.Timestamp(d).strftime("%d %b %Y")
+    return i18n.week(d)
 
 
 def fmt_short(d) -> str:
-    return pd.Timestamp(d).strftime("%d %b")
+    return i18n.short(d)
 
 
 @st.cache_data(show_spinner=False, max_entries=16)
@@ -117,11 +119,11 @@ def settings() -> tuple[pd.Timestamp, int, tuple[str, ...]]:
 
     with st.container(key="settings"):
         st.select_slider(
-            "Forecast issued",
+            T("Forecast issued"),
             options=dates,
             key="issue_date",
-            format_func=fmt_week,
-            help="Moshari only uses data up to this week, as a health officer would on that Monday.",
+            format_func=i18n.bound(i18n.week),
+            help=T("Moshari only uses data up to this week, as a health officer would on that Monday."),
         )
         quick = quick_weeks(data_key(), int(st.session_state.get("horizon") or 3))
         tips = {"Early": "Early season, a few weeks before the latest peak: the moment an early warning matters.",
@@ -130,28 +132,30 @@ def settings() -> tuple[pd.Timestamp, int, tuple[str, ...]]:
                 "Latest": "The newest week in the data."}
         with st.container(key="quick-weeks", horizontal=True, gap="small"):
             for label, week in quick.items():
-                st.button(label, key=f"jump_{label}", on_click=_jump_to, args=(week,), width="stretch",
+                st.button(T(label), key=f"jump_{label}", on_click=_jump_to, args=(week,), width="stretch",
                           type="primary" if st.session_state.get("issue_date") == week else "secondary",
-                          help=f"{tips[label]} Jumps to {fmt_week(week)}.")
+                          help=T("{tip} Jumps to {week}.", tip=T(tips[label]), week=i18n.week(week)))
         st.segmented_control(
-            "Weeks ahead",
+            T("Weeks ahead"),
             options=svc.bundle.horizons,
             key="horizon",
             width="stretch",
-            help="Rain takes 2 to 4 weeks to turn into cases, so this is the early-warning window.",
+            format_func=i18n.bound(lambda v, lg: i18n.num(v, "", lg)),
+            help=T("Rain takes 2 to 4 weeks to turn into cases, so this is the early-warning window."),
         )
         st.selectbox(
-            "Alert sensitivity",
+            T("Alert sensitivity"),
             options=list(ALERT_POLICIES),
             key="alert_policy",
-            format_func=lambda p: {"Standard": "Standard (expected)", "Balanced": "Balanced (midpoint)",
-                                   "Cautious": "Cautious (upper range)"}[p],
+            format_func=i18n.bound(lambda p, lg: T({"Standard": "Standard (expected)", "Balanced": "Balanced (midpoint)",
+                                                    "Cautious": "Cautious (upper range)"}[p], lg)),
         )
         cities = sorted(svc.wards[C.CITY_COL].unique())
-        chosen = st.multiselect("City corporations", cities, key="cities", placeholder="All five")
-        st.toggle("Offline mode", key="offline_mode", value=C.offline(),
-                  help="Make no network calls at all. Forecasts, allocation, simulation and dispatch never need "
-                       "the internet; only Live outlook's weather refresh is switched off.")
+        chosen = st.multiselect(T("City corporations"), cities, key="cities", placeholder=T("All five"),
+                                format_func=i18n.bound(i18n.tr))
+        st.toggle(T("Offline mode"), key="offline_mode", value=C.offline(),
+                  help=T("Make no network calls at all. Forecasts, allocation, simulation and dispatch never need "
+                         "the internet; only Live outlook's weather refresh is switched off."))
     horizon = st.session_state.get("horizon") or 3
     return pd.Timestamp(st.session_state["issue_date"]), int(horizon), tuple(chosen)
 
@@ -188,7 +192,39 @@ def link_params(issue_date, horizon: int, cities: tuple[str, ...]) -> dict:
     params = {"issue": pd.Timestamp(issue_date).strftime("%Y-%m-%d"), "h": int(horizon), "policy": policy()}
     if cities:
         params["cities"] = ",".join(cities)
+    if i18n.is_bn():
+        params["lang"] = "bn"   # English links stay exactly as before
     return params
+
+
+# --------------------------------------------------------------------------- language
+LANG_KEY = "lang"
+
+
+def apply_lang_param() -> None:
+    """``?lang=bn`` in a link opens the app in that language (read once, before the switch draws)."""
+    if st.session_state.get("_lang_qp_applied"):
+        return
+    st.session_state["_lang_qp_applied"] = True
+    wanted = st.query_params.get(LANG_KEY)
+    if wanted in i18n.LANGS:
+        st.session_state[LANG_KEY] = wanted
+
+
+def _keep_language() -> None:
+    """A segmented control can be clicked off; keep the previous language instead of none."""
+    if st.session_state.get(LANG_KEY) not in i18n.LANGS:
+        st.session_state[LANG_KEY] = st.session_state.get("_lang_prev", "en")
+    st.session_state["_lang_prev"] = st.session_state[LANG_KEY]
+
+
+def language_switch() -> None:
+    """English / বাংলা switch, at the top of the sidebar."""
+    if st.session_state.get(LANG_KEY) not in i18n.LANGS:
+        st.session_state[LANG_KEY] = "en"
+    st.session_state["_lang_prev"] = st.session_state[LANG_KEY]
+    st.segmented_control("ভাষা / Language", options=list(i18n.LANGS), format_func=i18n.LANGS.get,
+                         key=LANG_KEY, width="stretch", on_change=_keep_language)
 
 
 def _apply_query_params(svc: ForecastService) -> None:
