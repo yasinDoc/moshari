@@ -35,7 +35,7 @@ MONTHS_BN = ("জানুয়ারি", "ফেব্রুয়ারি",
 TIER_BN = {"Low": "নিম্ন", "Medium": "মাঝারি", "High": "উচ্চ", "Critical": "সংকটজনক"}
 _WARD_LABEL = re.compile(r"^(DNCC|DSCC|CCC|GCC|NCC) Ward (\d+)$")
 _BENGALI = re.compile(r"[\u0980-\u09FF]")
-_NUMBER_ONLY = re.compile(r"^[\s\d.,%+\-−–:/()×~<>≥≤]*$")
+_NUMBER_ONLY = re.compile(r"^[\s\d.,%+\-−–:/()×~<>≥≤→]*$")
 
 
 @lru_cache(maxsize=1)
