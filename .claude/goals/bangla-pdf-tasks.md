@@ -8,9 +8,9 @@ Built in the project thread after goal 1 (PR #32) merged. Base 5c533fb, test flo
 - [x] 3. Page serves it (`V2 page`)
 - [x] 4. English PDF unchanged (`V2 en`)
 - [x] 5. New tests real, pass (`V2 tests`, 11 tests in tests/test_briefing_pdf_bn.py)
-- [ ] 6. Screens still right (`V1 en`, `V1 bn`, `V1 switch`)
-- [ ] 7. Full suite passes
-- [ ] 8. Committed in scope (`V2 git`)
+- [x] 6. Screens still right: `V1 bn` and `V1 switch` PASS; `V1 en` reports only PR #31's Briefing subtitle, see the ruling
+- [x] 7. Full suite passes (1400 passed, 1400 collected >= 1389)
+- [ ] 8. Committed in scope (`V2 git`): fails only on the two URLs inside the official OFL.txt, see the ruling
 
 ## Design steps
 - [x] 1. Fonts (hashes match the pins), OFL.txt, `uharfbuzz>=0.39` in requirements.txt
@@ -27,6 +27,8 @@ Built in the project thread after goal 1 (PR #32) merged. Base 5c533fb, test flo
 - RULING: the fallback message shows the RuntimeError's English text (with the install command) after the Bangla sentence - the catalog check forbids Latin command words in Bangla text - cost if wrong: one English line in an error that only shows on a broken install.
 - RULING: "Available" in the Supplies table reads "বরাদ্দ" (allocated) - the English column shows the allocated amount - cost if wrong: a Bangla reader may prefer "মজুত".
 - RULING: the PDF's document title metadata stays "Moshari weekly briefing" in both languages - it is not printed on the page - cost if wrong: a Bangla PDF viewer shows an English window title.
+- RULING: `V2 git` reports "network code added" only because the official SIL licence (src/moshari/fonts/OFL.txt, which the design requires) contains two URLs: the Noto project's copyright line and scripts.sil.org/OFL. The licence is kept word for word, since the OFL requires its notice to travel unchanged; no code makes a network call - cost if wrong: criterion 8 stays red until the verifier skips OFL.txt.
+- RULING: `V1 en` reports 4 lines, all for the Weekly briefing subtitle that PR #31 changed on main after goal 1's English snapshot was taken (same as goal 1's ruling 9). Every other English screen matches - cost if wrong: none, the English text is what main has.
 
 ## Discarded attempts
 - `import uharfbuzz` inside try/except ImportError: needed `# noqa: F401`, replaced by `find_spec`.
