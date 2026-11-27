@@ -400,6 +400,8 @@ def _cell_text(v: Any, spec: str | None) -> Any:
         return core.week(v, "bn")
     if _is_num(v):
         v = _plain(v)
+        if callable(spec):
+            return core.digits(spec(v))
         if spec is None:
             spec = "d" if float(v).is_integer() and isinstance(v, int) else ".2f"
         return core.digits(format(v, spec))
@@ -409,12 +411,12 @@ def _cell_text(v: Any, spec: str | None) -> Any:
 
 
 def frame(df: pd.DataFrame, column_config: dict | None = None,
-          formats: dict[str, str] | None = None) -> tuple[pd.DataFrame, dict | None]:
+          formats: dict | None = None) -> tuple[pd.DataFrame, dict | None]:
     """``(df, column_config)`` for ``st.dataframe`` in the current language.
 
     English returns both unchanged. Bangla returns the same rows and columns with the headers
     through the catalog and every cell as Bangla text (numbers formatted with ``formats[col]``,
-    a Python format spec), so the browser never draws a Latin digit. Column help texts are
+    a Python format spec or a function of the value), so the browser never draws a Latin digit. Column help texts are
     kept, translated, on plain text columns.
     """
     if not is_bn():
