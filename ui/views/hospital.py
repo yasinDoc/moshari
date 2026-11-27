@@ -22,7 +22,13 @@ from moshari.routing import (
 )
 from ui import state, theme
 
+try:  # the allocation engine is a teammate's module; fall back to the fitted ratio without it
+    from moshari.allocation import allocate, demand_ratios
+except ImportError:  # pragma: no cover
+    allocate = demand_ratios = None
+
 RED = theme.TIER_COLORS["Critical"]
+bed_ratio = demand_ratios().ratios["hospital_beds_required"] if demand_ratios else FALLBACK_BEDS_PER_CASE
 AMBER = theme.TIER_COLORS["High"]
 GREEN = theme.TIER_COLORS["Low"]
 ALL = "All cities"
@@ -42,10 +48,10 @@ def bed_capacity() -> pd.Series:
 def routed(key: str, issue_date: pd.Timestamp, horizon: int, cities: tuple[str, ...], policy: str,
            surge_pct: int):
     fc = state.forecast_all(key, issue_date, horizon, cities, policy)
-    # Bed demand per ward. When Yasin's allocation engine is merged, pass its
-    # `allocate(...)` table here instead: route_overflow only needs
-    # ward_id, city and hospital_beds_required.
-    alloc = beds_from_forecast(fc)
+    # Bed demand per ward from the allocation engine, the same numbers the
+    # Resources and Dispatch pages use. Beds are routed as *required*: stock
+    # scarcity doesn't apply to beds, ward capacity does.
+    alloc = allocate(fc, state.service().wards) if allocate else beds_from_forecast(fc)
     return tuple(route_overflow(alloc, with_surge(bed_capacity(), surge_pct)))
 
 
@@ -249,7 +255,8 @@ with st.container(key="card-wards"):
             f"- **Capacity** is an estimate. The dataset has no bed-capacity column, so each ward's normal capacity is "
             f"its {CAPACITY_QUANTILE:.0%} percentile weekly `hospital_beds_required` from 2016 to {CAPACITY_END[:4]}, "
             "rounded up (1 to 5 beds). That is what the ward handles in a bad but normal week.\n"
-            f"- **Beds needed** are forecast cases × {FALLBACK_BEDS_PER_CASE}, the ratio in the onsite data, rounded up.\n"
+            f"- **Beds needed** are forecast cases × {bed_ratio:.3f} beds per case, fitted from the onsite data, "
+            "rounded up. They come from the allocation engine, so they match the Resources and Dispatch pages.\n"
             "- **Routing** never crosses city corporations. The ward with the most overflow goes first and fills the "
             "least loaded ward with spare beds, then the nearest by ward number.\n"
             "- Everything runs on this computer, with no internet."

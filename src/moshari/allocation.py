@@ -146,7 +146,9 @@ def allocate(
         df[need_col] = np.ceil(df["planned_cases"] * ratios.ratios[need_col] - 1e-9).astype(int)
 
     df["priority_score"] = priority_scores(df)
-    order = np.lexsort((-df["planned_cases"].to_numpy(), -df["priority_score"].to_numpy()))
+    # Ward id breaks remaining ties, so the plan never depends on input row order.
+    order = np.lexsort((df[C.WARD_COL].astype(str).to_numpy(), -df["planned_cases"].to_numpy(),
+                        -df["priority_score"].to_numpy()))
 
     for need_col, alloc_col, _ in RESOURCES:
         need = df[need_col].to_numpy()

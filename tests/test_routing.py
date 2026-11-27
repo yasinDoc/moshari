@@ -138,3 +138,136 @@ def test_routing_60_wards_is_fast(raw):
     for _ in range(20):
         route_overflow(alloc, cap)
     assert (time.perf_counter() - start) / 20 < 0.05
+
+
+# --------------------------------------------------------------------------- S2: properties on random cities
+def _random_city_week(seed: int):
+    """3 cities, 4–15 wards each, capacity 1–5, demand from quiet to 3× capacity."""
+    import numpy as np
+
+    rng = np.random.default_rng(seed)
+    rows, cap = [], {}
+    for c, code in (("Alpha", "AAA"), ("Beta", "BBB"), ("Gamma", "CCC")):
+        n = int(rng.integers(4, 16))
+        load = rng.uniform(0.2, 1.6)
+        for i in rng.permutation(np.arange(1, n + 1)):
+            w = f"{code}_Ward_{i:02d}"
+            cap[w] = int(rng.integers(1, 6))
+            rows.append((w, c, int(rng.poisson(cap[w] * load))))
+    return _table(rows), cap
+
+
+SEEDS = range(150)
+
+
+@pytest.mark.parametrize("seed", SEEDS)
+def test_routing_invariants_hold_on_random_cities(seed):
+    alloc, cap = _random_city_week(seed)
+    before = alloc.copy()
+    transfers, wards, cities = route_overflow(alloc, cap)
+    pd.testing.assert_frame_equal(alloc, before)                       # input untouched
+    city_of = dict(zip(alloc.ward_id, alloc.city))
+    w = wards.set_index("ward_id")
+
+    # 1. never across cities, never a ward to itself, always a positive whole number
+    assert all(city_of[t.from_ward] == city_of[t.to_ward] == t.city for t in transfers.itertuples())
+    assert (transfers.from_ward != transfers.to_ward).all() and (transfers.patients > 0).all()
+    # 2. patients conserved
+    assert w.sent.sum() == w.received.sum() == transfers.patients.sum()
+    assert ((w.beds_in_use + w.net_deficit) == (w.beds_required - w.sent + w.received)).all()
+    # 3. no ward ends over capacity; a ward never both sends and receives
+    assert (w.beds_in_use <= w.bed_capacity).all()
+    assert not ((w.sent > 0) & (w.received > 0)).any()
+    # 4. optimal on patients placed: each city places min(overflow, spare beds)
+    for city, g in w.groupby("city"):
+        overflow = (g.beds_required - g.bed_capacity).clip(lower=0).sum()
+        spare = (g.bed_capacity - g.beds_required).clip(lower=0).sum()
+        assert g.sent.sum() == min(overflow, spare), city
+        assert g.net_deficit.sum() == overflow - min(overflow, spare), city
+    # 5. city summary agrees with the ward table
+    cs = cities.set_index("city")
+    assert (cs.total_capacity == w.groupby("city").bed_capacity.sum()).all()
+    assert (cs.total_required == w.groupby("city").beds_required.sum()).all()
+    assert (cs.headroom == cs.total_capacity - cs.total_required).all()
+    assert (cs.unplaced == w.groupby("city").net_deficit.sum()).all()
+
+
+@pytest.mark.parametrize("seed", range(30))
+def test_routing_is_deterministic_whatever_the_row_order(seed):
+    alloc, cap = _random_city_week(seed)
+    a = route_overflow(alloc, cap)
+    b = route_overflow(alloc.sample(frac=1, random_state=seed), cap)
+    for x, y in zip(a, b):
+        pd.testing.assert_frame_equal(x.reset_index(drop=True), y.reset_index(drop=True))
+
+
+def test_capacity_accepts_series_dict_or_frame(two_cities):
+    alloc, cap = two_cities
+    as_frame = pd.DataFrame({"ward_id": list(cap), "bed_capacity": list(cap.values())})
+    results = [route_overflow(alloc, c).ward_summary for c in (cap, pd.Series(cap), as_frame)]
+    for r in results[1:]:
+        pd.testing.assert_frame_equal(results[0], r)
+
+
+def test_fractional_demand_is_rounded_up_and_blanks_count_as_zero():
+    alloc = pd.DataFrame({"ward_id": ["AAA_Ward_01", "AAA_Ward_02", "AAA_Ward_03"], "city": "Alpha",
+                          "hospital_beds_required": [2.1, None, "n/a"]})
+    _, wards, _ = route_overflow(alloc, {"AAA_Ward_01": 2, "AAA_Ward_02": 2, "AAA_Ward_03": 2})
+    assert list(wards.beds_required) == [3, 0, 0]
+    assert wards.set_index("ward_id").loc["AAA_Ward_01", "sent"] == 1
+
+
+def test_zero_capacity_ward_only_sends_and_unnumbered_wards_still_route():
+    alloc = _table([("AAA_Ward_01", "Alpha", 2), ("AAA_North", "Alpha", 0), ("AAA_Ward_02", "Alpha", 0)])
+    transfers, wards, cities = route_overflow(alloc, {"AAA_Ward_01": 0, "AAA_North": 1, "AAA_Ward_02": 1})
+    assert transfers.patients.sum() == 2
+    assert wards.set_index("ward_id").loc["AAA_Ward_01", "net_deficit"] == 0
+    # the numbered neighbour is "nearer" than the unnumbered ward, so it is filled first
+    assert transfers.iloc[0].to_ward == "AAA_Ward_02"
+
+
+def test_duplicate_wards_and_missing_columns_are_rejected():
+    dup = _table([("AAA_Ward_01", "Alpha", 1), ("AAA_Ward_01", "Alpha", 2)])
+    with pytest.raises(ValueError, match="more than one row"):
+        route_overflow(dup, {"AAA_Ward_01": 3})
+    with pytest.raises(ValueError, match="missing column"):
+        route_overflow(dup.drop(columns="city"), {"AAA_Ward_01": 3})
+
+
+def test_empty_table_gives_empty_results():
+    transfers, wards, cities = route_overflow(_table([]), {})
+    assert transfers.empty and wards.empty and cities.empty
+
+
+def test_capacity_estimate_uses_only_years_up_to_2023():
+    hist = pd.DataFrame({"date": pd.to_datetime(["2023-12-25"] * 10 + ["2024-01-01"]),
+                         "ward_id": "AAA_Ward_01", "hospital_beds_required": [2] * 10 + [50]})
+    assert estimate_bed_capacity(hist)["AAA_Ward_01"] == 2      # the 2024 spike is ignored
+    with pytest.raises(ValueError, match="No rows"):
+        estimate_bed_capacity(hist.assign(date=pd.Timestamp("2025-01-06")))
+
+
+# --------------------------------------------------------------------------- S2: allocation -> routing contract
+@pytest.fixture(scope="module")
+def july_2024_forecast(raw):
+    from moshari import config as C
+    from moshari.model import ForecastBundle
+    from moshari.service import ForecastService
+
+    if not C.MODEL_PATH.exists():
+        pytest.skip("model not trained")
+    svc = ForecastService(raw, ForecastBundle.load())
+    return svc.forecast_all(pd.Timestamp("2024-07-01"), 4), svc.wards
+
+
+@pytest.mark.parametrize("pct", [0.3, 1.0])
+def test_real_allocation_feeds_routing(july_2024_forecast, pct):
+    from moshari.allocation import allocate
+
+    fc, ward_profiles = july_2024_forecast
+    alloc = allocate(fc, ward_profiles, stock_pct=pct)
+    transfers, wards, cities = route_overflow(alloc, load_bed_capacity())
+    assert len(wards) == 60 and set(cities.city) == set(alloc.city)
+    # bed demand is routed as *required*, so stock scarcity does not change the plan
+    assert wards.beds_required.sum() == alloc.hospital_beds_required.sum()
+    assert transfers.patients.sum() > 0        # this week has real overflow to move
