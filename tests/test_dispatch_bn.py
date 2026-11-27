@@ -14,7 +14,23 @@ from moshari import config as C
 from moshari import dispatch as D
 from moshari import dispatch_bn as B
 from moshari.risk import TIERS
-from tests.test_dispatch import make_row
+
+
+def make_row(**over) -> dict:
+    """The same sample ward row as tests/test_dispatch.py (kept local: CI can't import across tests)."""
+    row = {
+        "ward_id": "DNCC_Ward_12", "city": "Dhaka", "date": pd.Timestamp("2025-06-02"),
+        "target_date": pd.Timestamp("2025-06-23"), "expected_cases": 10.2, "lower_80": 6.0, "upper_80": 15.0,
+        "tier": "High", "tier_idx": 2, "p_crit": 0.42,
+        "saline_bags_needed": 40, "saline_bags_allocated": 32,
+        "diagnostic_kits_needed": 12, "diagnostic_kits_allocated": 9,
+        "hospital_beds_required": 3, "hospital_beds_allocated": 3,
+        "crews_needed": 2, "crews_assigned": 2, "priority_rank": 4,
+        "transfers_out": [], "transfers_in": [], "bed_capacity": 3, "net_deficit": 0,
+    }
+    row.update(over)
+    return row
+
 
 LATIN_DIGIT = re.compile(r"[0-9]")
 
