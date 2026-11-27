@@ -84,22 +84,22 @@ Yasin's allocation output is the input for Samiya's routing and Ananya's dispatc
 - [ ] Retrain with `python scripts/train.py`, check the hold-out metrics, and commit the new model and `artifacts/`.
 - [x] Share the real column names (done: see "The onsite dataset").
 
-### Y2. Constrained resource allocation engine (module 1, 15 pts)
+### Y2. Constrained resource allocation engine (module 1, 15 pts) ✅ done: `allocation.py`, Resources page
 File: `src/moshari/allocation.py`, plus a new page `ui/views/resources.py`.
-- [ ] **Demand per ward:** turn expected cases into saline bags, test kits and beds with the ratios fitted from the onsite data (about 2.4, 1.2 and 0.3 per case). Round up so demand is never understated, and keep the ratios in one config block.
-- [ ] **Scarcity:**
+- [x] **Demand per ward:** turn expected cases into saline bags, test kits and beds with the ratios fitted from the onsite data (about 2.4, 1.2 and 0.3 per case). Round up so demand is never understated, and keep the ratios in one config block.
+- [x] **Scarcity:**
   - add an "Available regional stock" slider from 30% to 100% of total demand, and a "Total spraying crews" input
   - allocate in order of `priority_score` = risk (P(Critical), tier) × population density, so the riskiest and densest wards are served first
-- [ ] **Deficit warnings:** flag any ward that gets less than 100% of demand, with a live count and list.
-- [ ] **Crew assignment:** split crews by priority score, with a minimum of 1 for High and Critical wards while crews last.
-- [ ] **Page:** sliders, a table of demand against allocation, deficit alerts and totals.
+- [x] **Deficit warnings:** flag any ward that gets less than 100% of demand, with a live count and list.
+- [x] **Crew assignment:** split crews by priority score, with a minimum of 1 for High and Critical wards while crews last.
+- [x] **Page:** sliders, a table of demand against allocation, deficit alerts and totals.
 
-### Y3. Vector control impact simulator (module 3, 10 pts)
+### Y3. Vector control impact simulator (module 3, 10 pts) ✅ done: `simulation.py`, Simulator page
 File: `src/moshari/simulation.py`, plus a new page `ui/views/simulator.py`.
-- [ ] Let officers choose wards and how many crews each gets.
-- [ ] **Model-driven counterfactual:** a crew reduces breeding, so lower that ward's effective breeding-window rainfall or recent cases by an effect size, then re-run the 2-, 3- and 4-week models. Reuse the what-if machinery in `service.py` (`Scenario`, `ward_outlook`). Document the effect size and why it was chosen.
-- [ ] Show the reduction in cases, beds and saline for each of the 2, 3 and 4 weeks ahead.
-- [ ] **ROI ranking:** cases prevented per crew, with a "best next crew" suggestion.
+- [x] Let officers choose wards and how many crews each gets.
+- [x] **Model-driven counterfactual:** a crew reduces breeding, so lower that ward's effective breeding-window rainfall or recent cases by an effect size, then re-run the 2-, 3- and 4-week models. Reuse the what-if machinery in `service.py` (`Scenario`, `ward_outlook`). Document the effect size and why it was chosen.
+- [x] Show the reduction in cases, beds and saline for each of the 2, 3 and 4 weeks ahead.
+- [x] **ROI ranking:** cases prevented per crew, with a "best next crew" suggestion.
 
 ### Y4. Offline resilience and integration (module 5, 15 pts)
 - [ ] Check that every page and module runs with WiFi off. Live outlook already falls back to cached weather; make sure nothing else calls the internet.
