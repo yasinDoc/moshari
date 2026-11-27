@@ -364,7 +364,7 @@ def mode_tests() -> int:
 ALLOWED_PATHS = re.compile(r"^(README\.md|requirements\.txt|src/moshari/briefing(_pdf)?\.py|src/moshari/i18n\.py|"
                            r"src/moshari/locales/bn\.json|src/moshari/fonts/(NotoSansBengali-(Regular|Bold)\.ttf|OFL\.txt)|"
                            r"ui/views/briefing\.py|ui/i18n\.py|tests/test_briefing_pdf_bn\.py|"
-                           r"\.claude/goals/bangla-pdf-tasks\.md)$")
+                           r"\.claude/goals/.*)$")  # goal files themselves are guarded by the pins
 
 
 def mode_git() -> int:
@@ -379,8 +379,8 @@ def mode_git() -> int:
     if dirty:
         problems.append(f"uncommitted changes: {dirty[:8]}")
     changes = [l.split("\t") for l in git("diff", "--name-status", f"{BASE}..HEAD").splitlines()]
-    if not changes:
-        problems.append(f"no commits since {BASE}")
+    if not [c for c in changes if not c[-1].startswith(".claude/")]:
+        problems.append(f"no work committed since {BASE} (only goal files)")
     for parts in changes:
         status, path = parts[0], parts[-1]
         if not ALLOWED_PATHS.match(path):

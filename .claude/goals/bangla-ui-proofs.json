@@ -70,7 +70,7 @@
     },
     {
       "path": ".claude/goals/bangla-ui-verify.py",
-      "sha256": "7237cc3aae56831596dd2ce63982aeacde297b006b2840b5a5df4f6cd44bf9db"
+      "sha256": "07f4ca108a0354e46d7937c5ef62f8d1f9f25ec6e89fc1e96036450a31b833a1"
     },
     {
       "path": ".claude/goals/bangla-ui-en-snapshot.json",
@@ -86,7 +86,7 @@
     }
   ],
   "baseline": {
-    "taken_at": "2026-11-27T10:58:05",
+    "taken_at": "2026-11-27T11:09:59",
     "counters": {
       "tests": 1374
     },

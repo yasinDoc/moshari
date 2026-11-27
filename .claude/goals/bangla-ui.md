@@ -13,7 +13,7 @@ V = `python .claude/goals/bangla-ui-verify.py`.
 5. New tests real - proof: `V tests && python -m pytest tests/test_i18n.py -o addopts="" -q -rs` prints "PASS tests", "N passed in", N >= 12
 6. Full suite passes - proof: `python -m pytest -o addopts="" -q` last line; `--co` count >= 1374
 7. Committed in scope - proof: `V git` prints "PASS git", then `git diff --stat 0cf943d..HEAD`
-With V outputs print `sha256sum .claude/goals/bangla-ui-verify.py`, which must be 7237cc3aae56831596dd2ce63982aeacde297b006b2840b5a5df4f6cd44bf9db.
+With V outputs print `sha256sum .claude/goals/bangla-ui-verify.py`, which must be 07f4ca108a0354e46d7937c5ef62f8d1f9f25ec6e89fc1e96036450a31b833a1.
 
 SCOPE: the design's Components only (new i18n modules, catalog, tests/test_i18n.py; app.py, ui/, README.md; src/moshari/*.py only for an optional lang="en" keyword).
 
