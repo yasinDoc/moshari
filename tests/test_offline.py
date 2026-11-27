@@ -103,15 +103,24 @@ def test_live_weather_offline_without_cache_fails_cleanly(no_network, tmp_path):
         live.fetch_daily(tmp_path)
 
 
-def test_live_weather_offline_uses_cache_and_makes_no_calls(no_network, tmp_path):
-    from tests.test_live import FakeOpener, CITIES  # reuse the canned response
-    import os
+def _canned_weather(url, timeout):
+    """A fixed Open-Meteo-shaped response for two cities (no network)."""
+    import json
 
-    os.environ["MOSHARI_OFFLINE"] = "0"
-    live.fetch_daily(tmp_path, opener=FakeOpener(), cities=CITIES, offline=False)   # seed the cache
-    os.environ["MOSHARI_OFFLINE"] = "1"
-    df, info = live.fetch_daily(tmp_path, cities=CITIES)
-    assert info.source == "offline cache" and info.api_calls == 0 and len(df) > 0
+    days = pd.date_range("2026-08-24", periods=91, freq="D").strftime("%Y-%m-%d").tolist()
+    block = {"daily": {"time": days, "precipitation_sum": [10.0] * 91, "temperature_2m_mean": [30.0] * 91,
+                       "temperature_2m_max": [33.0] * 91, "temperature_2m_min": [26.0] * 91,
+                       "relative_humidity_2m_mean": [80.0] * 91}}
+    return json.dumps([block, block]).encode()
+
+
+TWO_CITIES = {"Dhaka North": (23.88, 90.38), "Chattogram": (22.36, 91.78)}
+
+
+def test_live_weather_offline_uses_cache_and_makes_no_calls(no_network, tmp_path):
+    live.fetch_daily(tmp_path, opener=_canned_weather, cities=TWO_CITIES, offline=False)   # seed the cache
+    df, info = live.fetch_daily(tmp_path, cities=TWO_CITIES, offline=True)
+    assert info.source == "offline cache" and info.api_calls == 0 and len(df) == 2 * 91
 
 
 @pytest.mark.parametrize("page", PAGES)
