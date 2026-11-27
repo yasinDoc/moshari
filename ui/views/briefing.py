@@ -96,7 +96,8 @@ with left:
             "No bed": [c["unplaced"] for c in brief["by_city"]],
         })
         st.dataframe(table, hide_index=True, width="stretch")
-        theme.card_title("Send teams here first", "Highest alert priority this week.", "Top 5")
+        theme.card_title("Send teams here first", "Highest forecast alert priority this week, as on Overview. "
+                         "Supplies follow the Resources ranking, which also weighs population density.", "Top 5")
         rows = [
             f'<div class="m-row"><div class="n">{i}</div>'
             f'<div><div class="w">{ward_label(r["ward_id"])} {theme.badge(r["tier"])}</div>'
