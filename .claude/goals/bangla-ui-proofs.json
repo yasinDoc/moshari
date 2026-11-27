@@ -1,0 +1,103 @@
+{
+  "goal": "bangla-ui",
+  "proofs": [
+    {
+      "criterion": "1",
+      "kind": "target",
+      "command": "{python} .claude/goals/bangla-ui-verify.py catalog",
+      "expect_regex": "(?m)^PASS catalog",
+      "timeout": 900,
+      "catches": "Bangla values empty, English, copied or made-up (transliterated: glossary), placeholders dropped, Latin digits, one word reused for all, t() not reading the catalog or not converting digits, page titles missing"
+    },
+    {
+      "criterion": "2",
+      "kind": "target",
+      "command": "{python} .claude/goals/bangla-ui-verify.py bn",
+      "expect_regex": "(?m)^PASS bn",
+      "timeout": 1500,
+      "catches": "any English word or Latin digit left on any page/state, numeric tables, Plotly ticks or hovers drawn in Latin digits, hollow or stopped pages, elements/charts/hover hidden in Bangla, untranslated titles or sidebar links, crashes, network"
+    },
+    {
+      "criterion": "3",
+      "kind": "target",
+      "command": "{python} .claude/goals/bangla-ui-verify.py switch",
+      "expect_regex": "(?m)^PASS switch",
+      "timeout": 900,
+      "catches": "switch missing or wrong key/label/default, ?lang=bn ignored, language lost between pages, ward links drop lang, English links changed, Dispatch not starting in Bangla, no Bangla body font"
+    },
+    {
+      "criterion": "4",
+      "kind": "invariant",
+      "command": "{python} .claude/goals/bangla-ui-verify.py en",
+      "expect_regex": "(?m)^PASS en",
+      "timeout": 1500
+    },
+    {
+      "criterion": "5",
+      "kind": "target",
+      "command": "{python} .claude/goals/bangla-ui-verify.py tests && {python} -m pytest tests/test_i18n.py -o addopts=\"\" -q -rs",
+      "expect_regex": "(?m)^(?:1[2-9]|[2-9]\\d|\\d{3,}) passed in ",
+      "timeout": 1500,
+      "catches": "missing, fewer than 12, skipped or hollow tests that still pass with an empty catalog or with t() ignoring Bangla"
+    },
+    {
+      "criterion": "6",
+      "kind": "invariant",
+      "command": "{python} -m pytest -o addopts=\"\" -q -p no:cacheprovider",
+      "timeout": 1800
+    },
+    {
+      "criterion": "7",
+      "kind": "target",
+      "command": "{python} .claude/goals/bangla-ui-verify.py git",
+      "expect_regex": "(?m)^PASS git",
+      "timeout": 300,
+      "catches": "work uncommitted, wrong author or message prefix, files out of scope (models, data, exports, scripts, requirements), existing tests edited, swallowed errors, network code"
+    }
+  ],
+  "counters": [
+    {
+      "name": "tests",
+      "command": "{python} -m pytest --co -q -o addopts=\"\"",
+      "regex": "(\\d+) tests? collected",
+      "rule": "no_decrease"
+    }
+  ],
+  "pinned": [
+    {
+      "path": ".claude/goals/bangla-ui-design.md",
+      "sha256": "08151caac69d01ff59e42f1fb385fa274607fca9e8187b0e02038bd6c46a3f48"
+    },
+    {
+      "path": ".claude/goals/bangla-ui-verify.py",
+      "sha256": "07f4ca108a0354e46d7937c5ef62f8d1f9f25ec6e89fc1e96036450a31b833a1"
+    },
+    {
+      "path": ".claude/goals/bangla-ui-en-snapshot.json",
+      "sha256": "aea1adf84c2d6be473f0c99ceb124540da68c8287013ce48cc8e57b3fa3129fe"
+    },
+    {
+      "path": "exports/",
+      "sha256": "43a03db6e9412b95cafcc926bd65fe1b02a5ac9975681d83f70866ccf130ef1c"
+    },
+    {
+      "path": "tests/conftest.py",
+      "sha256": "d045c59f66751f418f7df15e066bd2aa6edd3c659f345587870880a1e0a2d6d9"
+    }
+  ],
+  "baseline": {
+    "taken_at": "2026-11-27T11:09:59",
+    "counters": {
+      "tests": 1374
+    },
+    "proof_rc": [
+      1,
+      1,
+      1,
+      0,
+      1,
+      0,
+      1
+    ]
+  }
+}
