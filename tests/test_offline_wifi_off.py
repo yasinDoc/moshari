@@ -6,7 +6,7 @@ and DNS lookup is refused (as with Wi-Fi off), proxy settings are removed, and e
 is recorded, so a test can say exactly which page tried to go online.
 
 Guarantees:
-- all 10 pages render with no error, and only Live outlook ever tries the internet;
+- all 11 pages render with no error, and only Live outlook ever tries the internet;
 - Live outlook with no saved weather shows a friendly warning instead of crashing;
 - Live outlook with an old saved copy still works and says "Offline copy";
 - with the switch on, Live outlook makes no network attempt at all.
@@ -35,6 +35,7 @@ PAGES = {
     "ui/views/hospital.py": "Hospital beds",
     "ui/views/simulator.py": "Simulator",
     "ui/views/dispatch.py": "Dispatch",
+    "ui/views/briefing.py": "Weekly briefing",
     "ui/views/live.py": "Live outlook",
     "ui/views/ward_forecast.py": "Ward forecast",
     "ui/views/model_check.py": "Model accuracy",

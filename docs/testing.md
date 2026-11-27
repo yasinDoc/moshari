@@ -99,12 +99,12 @@ never a slow CI machine.
 ## Offline (S3)
 
 `tests/test_offline_wifi_off.py` runs every page with Wi-Fi off: all internet connections are
-refused and the `MOSHARI_OFFLINE` switch is not set. All 9 pages must render, and only Live outlook
+refused and the `MOSHARI_OFFLINE` switch is not set. All 11 pages must render, and only Live outlook
 may try the internet (it falls back to saved weather or a clear message). With the switch on,
 nothing tries the internet at all. To rehearse the same thing with the real app server:
 
 ```powershell
-.venv\Scripts\python scripts/offline_check.py   # prints "OFFLINE CHECK: 9/9 pages OK"
+.venv\Scripts\python scripts/offline_check.py   # prints "OFFLINE CHECK: 11/11 pages OK"
 ```
 
 The step-by-step check for the judges, with Wi-Fi really off, is in [offline_check.md](offline_check.md).
