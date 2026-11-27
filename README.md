@@ -8,6 +8,8 @@
 
 *Moshari* is Bangla for mosquito net. A net protects one family. Moshari helps protect whole wards by forecasting dengue cases **2 to 4 weeks ahead** from weather. That gives city corporations time to send larvicide and fogging teams *before* hospital admissions climb.
 
+Phase 2 turns the forecast into operations: how many saline bags, test kits, beds and spraying crews each ward gets when stock is short, where overflow patients go within their own city, how many cases extra crews would prevent, and the SMS, WhatsApp and printed notices that tell officers what to do. It all works with the internet off.
+
 ## Results at a glance
 
 Tested on 2024 and 2025, two seasons the model never saw during training (3-week forecasts, 6,300 ward-weeks):
@@ -23,6 +25,18 @@ Tested on 2024 and 2025, two seasons the model never saw during training (3-week
 | 4-week error with Open-Meteo rain forecast | **9% lower** (1.19 to 1.08 cases) |
 | Alert out before the season's first high-risk week | **90%** of ward-seasons, against 35% for a plain threshold |
 | Setup time with uv | **56 s** from a cold start |
+
+Phase 2, on the demo week (forecast issued 2 June 2025, 3 weeks ahead):
+
+| | Result |
+|---|---|
+| Supply ratios fitted from the onsite data | **2.384** saline bags, **1.158** test kits and **0.295** beds per case (R² 0.9997, 0.9988, 0.9804) |
+| Allocation at 70% stock and 40 crews | The **35** highest-priority wards get all their supplies and the other **25** are flagged with their exact gap. All 26 High wards get at least one crew, but they need 52, so 12 wards are one crew short |
+| Hospital overflow | Never crosses a city, checked on 150 random three-city weeks. The demo week has spare beds in every city, so nothing moves; in the busy week of 7 Aug 2023, 2 patients move (one within Dhaka North, one within Dhaka South) and 5 are reported unplaced |
+| 30 spraying crews, placed by the simulator | **48 fewer cases** at 3 weeks (399 to 351), about 14 beds and 114 saline bags saved |
+| Dispatch notices | **26** High-risk wards, each with an SMS of 160 characters or fewer, a WhatsApp message and a one-page brief, in [`exports/`](exports/) |
+| Offline | All **9** pages render with network sockets blocked (`tests/test_offline.py`) |
+| Tests | **999** passing |
 
 **Try it live:** https://moshari-sa5dxzxydg98ej4umhvbst.streamlit.app/ (free hosting sleeps when idle; the first visit can take about 30 seconds to wake)
 
@@ -88,15 +102,21 @@ Optional:
 
 ```bash
 python scripts/train.py            # retrain and re-evaluate (about 2 minutes on a laptop CPU)
-pip install -r requirements-dev.txt && pytest   # 976 tests
+pip install -r requirements-dev.txt && pytest   # 999 tests
 docker build -t moshari . && docker run -p 8501:8501 moshari
 ```
 
 ## What it does
 
+The sidebar follows an officer's working order: see the risk, allocate supplies, place patients, deploy crews, send the notices. The evidence pages come after.
+
 | Page | What a health officer gets |
 |---|---|
 | **Overview** | Every ward's risk for the chosen week as tiles in a net, grouped by city corporation, plus a whole-season view. Wards on Critical watch, early alerts, the six wards to send teams to first, and risk by city. Click any ward to open its forecast. |
+| **Resources** | Saline bags, test kits, beds and spraying crews for every ward. An "Available regional stock" slider (30% to 100% of demand) and a crew count, so you can see who goes short when stock is scarce, with a live list of deficit wards. |
+| **Hospital beds** | Bed demand against each ward's normal capacity, per-city cards for utilisation and headroom, the transfers that move overflow patients to wards with spare beds in the same city, and the wards still short, in red. A surge slider adds corridor or field beds. |
+| **Simulator** | Choose how many crews, or place them by hand, and see the cases, beds and saline they save at 2, 3 and 4 weeks. Wards are ranked by cases prevented per crew, with a best-next-crew suggestion. |
+| **Dispatch** | Pick one ward or all High and Critical wards and preview the SMS, the WhatsApp message and the commissioner brief. Download them one by one, as a zip, or as one printable file. |
 | **Live outlook** | Today's real weather from Open-Meteo (last 13 weeks plus a 14-day forecast) for every ward, with recent cases nowcast from that weather. The rain forecast feeds the 3- and 4-week outlook. One cached request for all five cities. |
 | **Ward forecast** | One ward's 2-, 3- and 4-week outlook with an 80% range, the chance of reaching High and Critical, and the recommended response. A chart that lines up rain with later cases. The drivers behind the forecast, and what-if sliders for rain, temperature and humidity that re-run the model live. |
 | **Model accuracy** | Hold-out results for 2024–25 against three simple baselines, a replay of both seasons, alert sensitivity, Critical weeks caught by probability, the gain from a rain forecast, and the evidence for the 3-week breeding lag. |
@@ -122,6 +142,29 @@ uvicorn moshari.api:app --app-dir src --port 8000   # interactive docs at http:/
 | `GET /wards/{ward_id}/explain` | Driver multipliers behind a forecast |
 | `POST /scenario` | What-if forecast with adjusted rain, temperature or humidity |
 | `GET /health`, `GET /wards` | Model version, thresholds, ward profiles |
+
+## Offline mode
+
+Every page works with the internet off. Only Live outlook ever calls the internet (Open-Meteo), and the kill switch stops that too: the page then shows the last cached weather, or a clear message if nothing is cached yet.
+
+```powershell
+$env:MOSHARI_OFFLINE = "1"; .venv\Scripts\streamlit run app.py      # Windows PowerShell
+```
+
+```bash
+MOSHARI_OFFLINE=1 .venv/bin/streamlit run app.py                     # macOS / Linux
+```
+
+You can also turn on **Offline mode** in the sidebar while the app is running. `pytest tests/test_offline.py` blocks network sockets and renders all 9 pages to prove it.
+
+## The onsite dataset
+
+`data/raw/dengue_onsite.csv` is the challenge data with three new columns: the same 31,320 ward-weeks for 60 wards over 2016–2025, plus `saline_bags_needed`, `diagnostic_kits_needed` and `hospital_beds_required`. The forecasting model still trains on `data/raw/dengue.csv`, whose columns are identical. The onsite file supplies two things:
+
+- the demand per case: 2.384 saline bags, 1.158 test kits and 0.295 beds, fitted by least squares;
+- each ward's bed capacity, which the data doesn't include: its 90th-percentile weekly bed demand over 2016–2023, which comes to 1 to 5 beds.
+
+The method behind each Phase 2 module is in [ARCHITECTURE.md](ARCHITECTURE.md#phase-2-from-forecast-to-operations).
 
 ## Exports: ready-to-send dispatch notices
 
@@ -165,7 +208,8 @@ moshari/
 ├── app.py                  # Streamlit entry point
 ├── run.ps1, run.sh         # one-step setup and launch
 ├── ui/                     # dashboard only: theme, components, cached state
-│   └── views/              # ward_net, live, ward_forecast, model_check, data_source
+│   └── views/              # ward_net, resources, hospital, simulator, dispatch,
+│                           # live, ward_forecast, model_check, data_source
 ├── src/moshari/            # forecasting engine, no UI code
 │   ├── config.py           # paths, schema, horizons, split dates
 │   ├── data.py             # ingestion + validation
@@ -176,29 +220,43 @@ moshari/
 │   ├── training.py         # chronological training pipeline
 │   ├── service.py          # ForecastService used by the UI and API
 │   ├── live.py             # Open-Meteo weather, ward adjustment, case nowcast
+│   ├── allocation.py       # demand ratios, priority, scarce stock, crews
+│   ├── routing.py          # bed capacity and overflow routing within a city
+│   ├── simulation.py       # vector-control crew simulator
+│   ├── dispatch.py         # SMS, WhatsApp and commissioner brief templates
+│   ├── dispatch_pdf.py     # the brief as a PDF (reportlab)
 │   └── api.py              # FastAPI REST layer
-├── scripts/                # train.py, fetch_data.py
+├── scripts/                # train.py, fetch_data.py, export_dispatch.py
 ├── models/                 # serialized model bundle
 ├── artifacts/              # metrics.json, backtest.parquet
-├── data/raw/dengue.csv     # challenge dataset
+├── data/raw/               # dengue.csv (challenge data), dengue_onsite.csv (with demand)
+├── exports/                # sample SMS, WhatsApp and brief files for the demo week
 ├── tests/                  # pytest suite
-└── docs/                   # screenshots, demo script
+└── docs/                   # screenshots, demo and video scripts, Q&A prep, testing guide
 ```
 
 ## Team
 
-Built by **Samiya**, **Ananya** and **Yasin** for the EDU AI Engineering Hackathon 2026, preliminary round (21 to 22 Nov 2026).
+Built by **Samiya**, **Ananya** and **Yasin** for the EDU AI Engineering Hackathon 2026: the preliminary round (21 to 22 Nov 2026) and the 10-hour onsite final (27 Nov 2026), where we added the Phase 2 modules.
+
+| Who | Phase 2 work |
+|---|---|
+| Yasin | Resource allocation, crew simulator, offline mode, integration and deployment |
+| Samiya | Hospital overflow routing, allocation and routing tests, offline check |
+| Ananya | Dispatch notices, the `exports/` folder, ARCHITECTURE.md, README, AI disclosure, video script and Q&A prep |
 
 ## AI assistants and external services
 
-We disclose every AI tool and outside service used to build or run Moshari.
+We disclose every AI tool and outside service used to build or run Moshari. Across both rounds, including the onsite final, the team used exactly two AI tools, and no others.
 
 **AI assistants**
 
 | Tool | Used for |
 |---|---|
-| Claude Code (Anthropic, model Claude Opus 5.5) | Pair-programming the pipeline, model, dashboard, tests and documentation; design review of the visual identity |
+| Claude Code (Anthropic, model Claude Opus 5.5) | Pair-programming the pipeline, model, dashboard, tests and documentation; design review of the visual identity. In the final: the allocation engine, routing, simulator, dispatch templates and exports script, their tests, and this documentation |
 | GitHub Copilot (Microsoft, Copilot SDK in VS Code) | Code inspection and implementation support, test and environment validation, and documentation updates |
+
+Both were used only while building. Nothing in the app calls an AI model: the dispatch notices are fixed templates filled from the allocation and routing tables, so they work offline and give the same text every time.
 
 **External APIs and services**
 
@@ -209,12 +267,13 @@ We disclose every AI tool and outside service used to build or run Moshari.
 | Streamlit Community Cloud | Hosting the public demo | Free hosting of the same code from this repo; not needed to run locally |
 | Google Fonts | When the dashboard loads in a browser | Manrope, Hind Siliguri; falls back to system fonts offline |
 
-All forecasting runs locally and no LLM is used. The only runtime API is Open-Meteo on the Live outlook page: at most one request every 6 hours.
+All forecasting, allocation, routing, simulation and dispatch runs locally, and no LLM is used. The only runtime API is Open-Meteo on the Live outlook page: at most one request every 6 hours.
 
 ## Roadmap for the final round
 
 - Connect live dengue case reports, so the Live outlook uses reported cases instead of a weather-driven nowcast.
-- Add SMS alerts through the REST API for ward-level High and Critical forecasts.
+- Send the dispatch notices through an SMS and WhatsApp gateway. Today they are generated and downloaded, not sent.
+- Replace the estimated bed capacity with real hospital bed counts, and the assumed crew effect with spraying records.
 - Replace the net-style ward display with a ward map using real ward boundaries and coordinates.
 
 ## License
