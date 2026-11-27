@@ -145,5 +145,19 @@
     "glob": "ui/views/briefing.py",
     "n": 1,
     "lines": 60
+  },
+  "baseline": {
+    "taken_at": "2026-11-27T09:59:36",
+    "counters": {
+      "tests": 1013
+    },
+    "proof_rc": [
+      1,
+      1,
+      1,
+      1,
+      0,
+      1
+    ]
   }
 }
