@@ -72,6 +72,7 @@ def date_fmt(d, fmt: str, lang: str | None = None) -> str:
 # --------------------------------------------------------------------------- Plotly in Bangla
 _FIELD = re.compile(r"%\{([^}|:]+)(?:\|([^}]*)|:([^}]*))?\}")
 _EXTRA = re.compile(r"<extra>.*?</extra>", re.S)
+_BENGALI = re.compile(r"[\u0980-\u09FF]")
 
 
 def _plain(v: Any) -> Any:
@@ -314,7 +315,7 @@ def localize_figure(fig) -> None:
                 body = _EXTRA.sub("", template)
                 extra = _EXTRA.search(template)
                 extra_txt = extra.group(0)[7:-8] if extra else None
-                bn_body = core.t(body, "bn")
+                bn_body = body if _BENGALI.search(body) else core.t(body, "bn")   # already Bangla
                 bn_extra = core.t(extra_txt, "bn") if extra_txt else ""
             else:
                 bn_body = ("%{fullData.name}<br>" if name else "") + "%{x}: %{y}" if tr_.type != "heatmap" \

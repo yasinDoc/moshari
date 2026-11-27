@@ -428,5 +428,17 @@ def plot(fig: go.Figure, height: int) -> None:
     from ui.i18n import localize_figure
 
     fig.update_layout(height=height)
+    # Name every axis a trace draws on, in both languages (``visible=True`` is Plotly's default, so
+    # nothing changes on screen); the Bangla version sets tick text on them and keeps the same axes.
+    present = {k for k in fig.layout.to_plotly_json() if k[1:5] == "axis"}
+    for tr_ in fig.data:
+        for letter in ("x", "y"):
+            if not hasattr(tr_, letter + "axis"):
+                continue
+            ref = getattr(tr_, letter + "axis") or letter
+            name = letter + "axis" + ref[1:]
+            if name not in present:
+                fig.layout[name].visible = True
+                present.add(name)
     localize_figure(fig)
     st.plotly_chart(fig, width="stretch", config=PLOT_CONFIG, theme=None)
