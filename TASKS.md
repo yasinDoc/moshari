@@ -12,6 +12,21 @@ We extend Moshari from *forecasting* to *operations*: how many saline bags, test
 
 ---
 
+## The onsite dataset (already checked)
+
+Saved as `data/raw/dengue_onsite.csv` ([source sheet](https://docs.google.com/spreadsheets/d/1wAazQIRO-rzkrrlgD3YPcyyAPjMc1dN2pbr5rozA8BU/edit)). It's the Phase 1 data with three new columns: same 31,320 rows, 60 wards, 2016–2025, and the old columns are identical, so the trained model still applies.
+
+| New column | Relation to `dengue_cases` | Use it for |
+|---|---|---|
+| `saline_bags_needed` | about **2.4 × cases** (exact for 96.5% of rows, r = 0.9998) | Saline demand |
+| `diagnostic_kits_needed` | about **1.2 × cases** (exact for 88%, r = 0.9994) | Test-kit demand |
+| `hospital_beds_required` | about **0.3 × cases** (exact for 96%, r = 0.990) | Bed demand |
+
+- **Demand formulas (Yasin):** fit these ratios from the data (least squares on cases), store them in config, and apply them to *forecast* cases. Quote the fit in ARCHITECTURE.md; it's a strong answer to "where do your numbers come from?".
+- **There is no bed-capacity column (Samiya):** estimate each ward's capacity as its **90th-percentile weekly `hospital_beds_required`** over 2016–2023, which comes to 1–4 beds per ward. That's its normal planning level; peak weeks need 8–12 beds, so routing has real overflow to move. Document this assumption.
+
+---
+
 ## Rules for everyone
 
 1. **Work on your own branch** (`yasin`, `samiya`, `ananya`). Pull `main` before you start and every time a pull request is merged:
@@ -64,14 +79,14 @@ Yasin's allocation output is the input for Samiya's routing and Ananya's dispatc
 ## Yasin: 50%
 
 ### Y1. New dataset and model (first 1.5 hours)
-- [ ] Download `bangladesh_dengue_large_dataset_onsite` to `data/raw/` and check its columns, especially bed capacity and supply columns.
+- [x] Download the onsite dataset to `data/raw/dengue_onsite.csv` and check its columns (see "The onsite dataset" above).
 - [ ] Update `config.py` and `data.validate()` for any new columns, and keep the old file working.
 - [ ] Retrain with `python scripts/train.py`, check the hold-out metrics, and commit the new model and `artifacts/`.
-- [ ] Tell Samiya and Ananya the real column names as soon as you know them.
+- [x] Share the real column names (done: see "The onsite dataset").
 
 ### Y2. Constrained resource allocation engine (module 1, 15 pts)
 File: `src/moshari/allocation.py`, plus a new page `ui/views/resources.py`.
-- [ ] **Demand per ward:** turn expected cases into saline bags, test kits and beds using clear, documented ratios. Example to adjust: about 25% of cases hospitalised, 4 saline bags per admitted patient, 1.2 test kits per expected case, plus a safety buffer by tier. Put the ratios in one config block.
+- [ ] **Demand per ward:** turn expected cases into saline bags, test kits and beds with the ratios fitted from the onsite data (about 2.4, 1.2 and 0.3 per case). Round up so demand is never understated, and keep the ratios in one config block.
 - [ ] **Scarcity:**
   - add an "Available regional stock" slider from 30% to 100% of total demand, and a "Total spraying crews" input
   - allocate in order of `priority_score` = risk (P(Critical), tier) × population density, so the riskiest and densest wards are served first
@@ -102,7 +117,7 @@ File: `src/moshari/simulation.py`, plus a new page `ui/views/simulator.py`.
 
 ### S1. Hospital overflow routing (module 2, 10 pts)
 File: `src/moshari/routing.py`, plus a new page `ui/views/hospital.py`.
-- [ ] Take each ward's `hospital_beds_required` (from the allocation table) and its **bed capacity**: from the new dataset if it has one, otherwise a documented estimate such as beds per 10,000 people scaled by density. Ask Yasin which.
+- [ ] Take each ward's `hospital_beds_required` (from the allocation table) and its **bed capacity**. The dataset has none, so use each ward's 90th-percentile weekly `hospital_beds_required` over 2016–2023, as described in "The onsite dataset".
 - [ ] **Routing, strictly within the same city:**
   - wards over capacity send patients to wards with spare beds
   - start with the least loaded ward, ideally the nearest if ward numbers or neighbours are available, and stop when the overflow is placed or the city runs out of beds
