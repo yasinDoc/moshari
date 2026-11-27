@@ -6,6 +6,7 @@ dashboard can never drift apart.
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 # --------------------------------------------------------------------------- #
@@ -14,6 +15,9 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 DATA_DIR = PROJECT_ROOT / "data"
 RAW_DATA_PATH = DATA_DIR / "raw" / "dengue.csv"
+# Phase 2 onsite file: the same rows plus observed supply demand per ward-week.
+ONSITE_DATA_PATH = DATA_DIR / "raw" / "dengue_onsite.csv"
+SUPPLY_COLS = ["saline_bags_needed", "diagnostic_kits_needed", "hospital_beds_required"]
 MODELS_DIR = PROJECT_ROOT / "models"
 MODEL_PATH = MODELS_DIR / "moshari_lgbm.joblib"
 ARTIFACTS_DIR = PROJECT_ROOT / "artifacts"
@@ -90,3 +94,12 @@ TIER_NAMES = ("Low", "Medium", "High", "Critical")
 TIER_QUANTILES = (0.70, 0.85, 0.95)  # lower bounds of Medium / High / Critical
 
 RANDOM_SEED = 42
+
+
+def offline() -> bool:
+    """True when ``MOSHARI_OFFLINE`` is set: no network calls at all (judging kill switch).
+
+    Forecasting, allocation, routing, simulation and dispatch templates never need
+    the network; this only stops the optional Open-Meteo request on Live outlook.
+    """
+    return os.environ.get("MOSHARI_OFFLINE", "").strip().lower() in {"1", "true", "yes", "on"}

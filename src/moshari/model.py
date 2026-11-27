@@ -43,11 +43,23 @@ KINDS = ("mean", "q10", "q90")
 # Probability of reaching High / Critical, and a mean model that also sees the weather forecast.
 PROB_KINDS = {"p_high": "High", "p_crit": "Critical"}
 FORECAST_KIND = "fc_mean"
+# Simulation model: same features, but cases may only rise with breeding rain
+# (LightGBM monotone constraints). Used by the vector-control simulator so adding
+# a crew can never increase a forecast.
+SIM_KIND = "sim_mean"
+BREEDING_FEATURES = [
+    *[f"rain_lag_{k}w" for k in range(9)], "rain_sum_2w", "rain_sum_4w", "rain_sum_8w",
+    "rain_breeding_window", "heavy_rain_weeks_4w",
+]
+
+
+def monotone_constraints(cols: list[str]) -> list[int]:
+    return [1 if c in BREEDING_FEATURES else 0 for c in cols]
 
 
 def _params(kind: str) -> dict[str, Any]:
     p = dict(BASE_PARAMS)
-    if kind in ("mean", FORECAST_KIND):
+    if kind in ("mean", FORECAST_KIND, SIM_KIND):
         p.update(objective="poisson", metric="poisson")
     elif kind in PROB_KINDS:
         p.update(objective="binary", metric="binary_logloss")
@@ -66,17 +78,21 @@ def fit_booster(
     num_rounds: int | None = None,
 ) -> lgb.Booster:
     """Fit one booster. With a validation set: early stopping. Without: fixed rounds."""
+    params = _params(kind)
+    if kind == SIM_KIND:
+        params.update(monotone_constraints=monotone_constraints(list(X_tr.columns)),
+                      monotone_constraints_method="advanced")
     dtr = lgb.Dataset(X_tr, y_tr, categorical_feature=CATEGORICAL_FEATURES, free_raw_data=False)
     if X_va is not None:
         dva = lgb.Dataset(X_va, y_va, reference=dtr, categorical_feature=CATEGORICAL_FEATURES)
         return lgb.train(
-            _params(kind),
+            params,
             dtr,
             num_boost_round=3000,
             valid_sets=[dva],
             callbacks=[lgb.early_stopping(150, verbose=False)],
         )
-    return lgb.train(_params(kind), dtr, num_boost_round=int(num_rounds or 500))
+    return lgb.train(params, dtr, num_boost_round=int(num_rounds or 500))
 
 
 def interval(q_lo, q_hi, mean, offset: float = 0.0) -> tuple[np.ndarray, np.ndarray]:

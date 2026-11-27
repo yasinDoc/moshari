@@ -82,13 +82,20 @@ def build_url(cities: dict[str, tuple[float, float]] = CITY_COORDS, past_days: i
 
 
 def fetch_daily(
-    cache_dir: Path = CACHE_DIR,
+    cache_dir: Path | None = None,
     ttl_hours: float = 6.0,
     force: bool = False,
     opener: Callable[[str, float], bytes] = _default_opener,
     cities: dict[str, tuple[float, float]] = CITY_COORDS,
+    offline: bool | None = None,
 ) -> tuple[pd.DataFrame, FetchInfo]:
-    """Daily weather per city (observed + forecast), from cache when fresh."""
+    """Daily weather per city (observed + forecast), from cache when fresh.
+
+    ``offline`` (default: the ``MOSHARI_OFFLINE`` switch) never touches the network:
+    it serves the last cached response, or raises a clear error if there is none.
+    """
+    offline = C.offline() if offline is None else offline
+    cache_dir = Path(cache_dir) if cache_dir is not None else CACHE_DIR
     url = build_url(cities)
     key = hashlib.sha1(url.encode()).hexdigest()[:12]
     cache_dir.mkdir(parents=True, exist_ok=True)
@@ -96,9 +103,16 @@ def fetch_daily(
 
     cached = None
     if path.exists():
-        cached = json.loads(path.read_text(encoding="utf-8"))
-        if not force and time.time() - cached["fetched_at"] < ttl_hours * 3600:
-            return _to_frame(cached["payload"], cities), FetchInfo("cache", cached["fetched_at"], 0)
+        try:
+            cached = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            cached = None  # a corrupt cache file is treated as missing
+    if offline:
+        if cached is None:
+            raise LiveWeatherUnavailable("Offline mode is on and no weather has been cached yet.")
+        return _to_frame(cached["payload"], cities), FetchInfo("offline cache", cached["fetched_at"], 0)
+    if cached is not None and not force and time.time() - cached["fetched_at"] < ttl_hours * 3600:
+        return _to_frame(cached["payload"], cities), FetchInfo("cache", cached["fetched_at"], 0)
 
     try:
         payload = json.loads(opener(url, 20.0))

@@ -255,7 +255,7 @@ a.m-cell { cursor:pointer; }
 [data-testid="stSliderTickBarMin"], [data-testid="stSliderTickBarMax"] { color:var(--muted) !important; font-size:12px !important; }
 [data-testid="stButtonGroup"] button { flex:1; min-height:38px; background:var(--base) !important; border:none !important;
   border-radius:var(--r-sm) !important; box-shadow:var(--raise-xs) !important; color:var(--ink-2) !important; font-weight:700; font-size:14px; }
-[data-testid="stButtonGroup"] button[aria-checked="true"] { box-shadow:var(--press-sm) !important; color:var(--accent) !important; }
+button[data-variant="segmented_control"][aria-checked="true"], [data-testid="stButtonGroup"] button[aria-checked="true"] { box-shadow:var(--press-sm) !important; color:var(--accent) !important; }
 .stButton button, [data-testid="stBaseButton-secondary"], [data-testid="stBaseButton-primary"] {
   min-height:42px; padding:0 20px; background:var(--base) !important; border:none !important; border-radius:var(--r-sm) !important;
   box-shadow:var(--raise-sm) !important; color:var(--ink) !important; font-weight:700; font-size:14px; }

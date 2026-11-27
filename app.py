@@ -37,6 +37,8 @@ theme.inject_css()
 
 PAGES = [
     st.Page("ui/views/ward_net.py", title="Overview", icon=":material/space_dashboard:", default=True),
+    st.Page("ui/views/resources.py", title="Resources", icon=":material/inventory_2:"),
+    st.Page("ui/views/simulator.py", title="Simulator", icon=":material/science:"),
     st.Page("ui/views/live.py", title="Live outlook", icon=":material/cloud:"),
     st.Page("ui/views/ward_forecast.py", title="Ward forecast", icon=":material/monitoring:"),
     st.Page("ui/views/model_check.py", title="Model accuracy", icon=":material/verified:"),
@@ -64,12 +66,13 @@ with st.sidebar:
     meta = svc.bundle.metadata
     st.html(
         f"""<div class="m-status">
-              <div class="r"><span class="live"></span>Model ready</div>
+              <div class="r"><span class="live"></span>Model ready{" (offline)" if state.is_offline() else ""}</div>
               <dl>
                 <dt>Trained through</dt><dd>{meta.get('trained_through', 'unknown')}</dd>
                 <dt>Data to</dt><dd>{state.fmt_week(svc.raw['date'].max())}</dd>
                 <dt>Wards</dt><dd>{len(svc.wards)}</dd>
-                <dt>API calls</dt><dd>None</dd>
+                <dt>Mode</dt><dd>{"Offline" if state.is_offline() else "Online"}</dd>
+                <dt>Needs internet</dt><dd>No</dd>
               </dl>
             </div>"""
     )

@@ -19,10 +19,10 @@ policy = state.policy()
 svc_hist = state.service()
 
 try:
-    daily, info = state.live_weather(st.session_state.get("live_refresh", 0))
+    daily, info = state.live_weather(st.session_state.get("live_refresh", 0), state.is_offline())
 except live.LiveWeatherUnavailable as e:
     theme.header("Live outlook", "Real weather from Open-Meteo, run through the trained model")
-    st.warning(f"{e} Live mode needs one internet request; the rest of Moshari works offline.")
+    st.warning(f"{e} Live outlook needs one internet request (or a cached copy); every other page works offline.")
     st.stop()
 
 weekly = live.to_weekly(daily)
@@ -30,7 +30,8 @@ obs_week, fc_week = live.issue_weeks(weekly)
 
 age_min = (time.time() - info["fetched_at"]) / 60
 age = "just now" if age_min < 1 else (f"{age_min:.0f} min ago" if age_min < 90 else f"{age_min / 60:.1f} h ago")
-src = {"network": "Live", "cache": "Cached", "stale cache": "Offline copy"}[info["source"]]
+src = {"network": "Live", "cache": "Cached", "stale cache": "Offline copy",
+       "offline cache": "Offline mode"}[info["source"]]
 
 top_l, top_r = st.columns([5, 2], vertical_alignment="bottom")
 with top_l:
@@ -129,7 +130,8 @@ with right:
                 f'<div><div class="k">API calls this load</div><div class="v">{info["api_calls"]}</div></div>'
                 f'<div><div class="k">Cache lifetime</div><div class="v">6 h</div></div></div>')
         if st.button("Refresh weather", icon=":material/refresh:", width="stretch",
-                     disabled=age_min < 10, help="Available 10 minutes after the last download."):
+                     disabled=age_min < 10 or state.is_offline(),
+                     help="Available 10 minutes after the last download, and not in offline mode."):
             st.session_state["live_refresh"] = st.session_state.get("live_refresh", 0) + 1
             state.live_weather.clear()
             st.rerun()

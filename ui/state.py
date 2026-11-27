@@ -127,17 +127,23 @@ def settings() -> tuple[pd.Timestamp, int, tuple[str, ...]]:
         )
         cities = sorted(svc.wards[C.CITY_COL].unique())
         chosen = st.multiselect("City corporations", cities, key="cities", placeholder="All five")
+        st.toggle("Offline mode", key="offline_mode", value=C.offline(),
+                  help="Make no network calls at all. Forecasts, allocation, simulation and dispatch never need "
+                       "the internet; only Live outlook's weather refresh is switched off.")
     horizon = st.session_state.get("horizon") or 3
     return pd.Timestamp(st.session_state["issue_date"]), int(horizon), tuple(chosen)
 
 
 # --------------------------------------------------------------------------- live weather
 @st.cache_data(ttl=600, show_spinner="Fetching live weather…")
-def live_weather(refresh_token: int = 0) -> tuple[pd.DataFrame, dict]:
-    """Daily Open-Meteo weather. Disk cache (6 h) inside; this layer just avoids re-reading it."""
+def live_weather(refresh_token: int = 0, offline: bool = False) -> tuple[pd.DataFrame, dict]:
+    """Daily Open-Meteo weather. Disk cache (6 h) inside; this layer just avoids re-reading it.
+
+    With ``offline`` no request is made: the last cached response is used.
+    """
     from moshari import live
 
-    daily, info = live.fetch_daily(force=refresh_token > 0)
+    daily, info = live.fetch_daily(force=refresh_token > 0 and not offline, offline=offline)
     return daily, {"source": info.source, "fetched_at": info.fetched_at, "api_calls": info.api_calls}
 
 
@@ -148,7 +154,7 @@ def live_service(fetched_at: float, observed_week: pd.Timestamp, last_week: pd.T
     when ``use_forecast``, the Open-Meteo rain forecast for the weeks after ``observed_week``."""
     from moshari import live
 
-    daily, _ = live_weather(st.session_state.get("live_refresh", 0))
+    daily, _ = live_weather(st.session_state.get("live_refresh", 0), is_offline())
     weekly = live.to_weekly(daily)
     frame = live.live_frame(service().raw, weekly, last_week, get_bundle(), nowcast_from=observed_week)
     return ForecastService(frame, get_bundle(), use_forecast=use_forecast)
@@ -186,3 +192,8 @@ def _apply_query_params(svc: ForecastService) -> None:
     except (ValueError, TypeError):
         pass  # a malformed link falls back to defaults
     st.query_params.clear()
+
+
+def is_offline() -> bool:
+    """Offline when the sidebar toggle is on or MOSHARI_OFFLINE is set."""
+    return bool(st.session_state.get("offline_mode", C.offline())) or C.offline()
