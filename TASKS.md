@@ -76,7 +76,7 @@ Yasin's allocation output is the input for Samiya's routing and Ananya's dispatc
 
 ---
 
-## Yasin: 50%
+## Yasin: 
 
 ### Y1. New dataset and model (first 1.5 hours)
 - [x] Download the onsite dataset to `data/raw/dengue_onsite.csv` and check its columns (see "The onsite dataset" above).
@@ -113,7 +113,7 @@ File: `src/moshari/simulation.py`, plus a new page `ui/views/simulator.py`.
 
 ---
 
-## Samiya: 25%
+## Samiya: 
 
 ### S1. Hospital overflow routing (module 2, 10 pts)
 File: `src/moshari/routing.py`, plus a new page `ui/views/hospital.py`.
@@ -148,7 +148,7 @@ File: `tests/test_routing.py`, plus tests for Yasin's allocation in `tests/test_
 
 ---
 
-## Ananya: 25%
+## Ananya: 
 
 ### A1. Dispatch notices (module 4)
 File: `src/moshari/dispatch.py`, plus a new page `ui/views/dispatch.py`.
