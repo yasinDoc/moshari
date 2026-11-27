@@ -176,7 +176,7 @@
   "Each crew removes a share of a ward's remaining breeding sites, so extra crews in the same ward help less. The forecast models then re-run on the reduced breeding signal.": "প্রতিটি দল একটি ওয়ার্ডের অবশিষ্ট প্রজননস্থলের একটি অংশ দূর করে, তাই একই ওয়ার্ডে বাড়তি দলের সুফল কমে আসে। তারপর কমে যাওয়া প্রজনন সংকেতে পূর্বাভাসের মডেল আবার চলে।",
   "Each overflow ward fills the least loaded ward first, then the nearest by ward number.": "উপচে পড়া প্রতিটি ওয়ার্ড আগে সবচেয়ে কম ভরা ওয়ার্ড পূরণ করে, তারপর ওয়ার্ড নম্বরে সবচেয়ে কাছেরটি।",
   "Each tile is a ward, showing expected dengue cases that week. Hover for details, click to open its forecast.": "প্রতিটি ঘর একটি ওয়ার্ড, সেই সপ্তাহের প্রত্যাশিত ডেঙ্গু রোগী দেখায়। বিস্তারিত দেখতে কার্সর রাখুন, পূর্বাভাস খুলতে ক্লিক করুন।",
-  "Early": "শুরুর দিক",
+  "Early": "শুরু",
   "Early alert": "আগাম সতর্কতা",
   "Early alert ({policy} rule{caught})": "আগাম সতর্কতা ({policy} নিয়ম{caught})",
   "Early alert: upper range reaches High": "আগাম সতর্কতা: ঊর্ধ্বসীমা উচ্চ স্তরে পৌঁছায়",
