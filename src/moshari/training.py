@@ -35,7 +35,7 @@ from .evaluation import (
     tier_metrics,
 )
 from .features import FEATURE_COLS, FEATURE_SPECS, LEAD_COLS, build_features, lag_correlations, target_col
-from .model import FORECAST_KIND, KINDS, PROB_KINDS, ForecastBundle, conformal_offset, fit_booster, interval
+from .model import FORECAST_KIND, KINDS, PROB_KINDS, SIM_KIND, ForecastBundle, conformal_offset, fit_booster, interval
 from .risk import assign_tier, tier_thresholds
 
 
@@ -202,12 +202,20 @@ def run_training(production: bool = False, log=print) -> dict[str, Any]:
             "mae_seasonal_average": regression_metrics(y_f, clim_f)["mae"],
             "n_test": int(len(te_f)),
         }
+        # ---- simulation model (monotone in breeding rain) --------------------
+        a = fit_booster(SIM_KIND, tr[FEATURE_COLS], tr[tcol], va[FEATURE_COLS], va[tcol])
+        boosters[(h, SIM_KIND)] = fit_booster(SIM_KIND, final_fit[FEATURE_COLS], final_fit[tcol],
+                                              num_rounds=max(int(a.best_iteration * 1.1), 50))
+        sim_te = np.clip(boosters[(h, SIM_KIND)].predict(X_te), 0, None)
+        hm["simulation_model"] = {"mae": regression_metrics(y_te, sim_te)["mae"],
+                                  "mae_main_model": hm["model"]["mae"]}
         metrics["horizons"][str(h)] = hm
         pc = hm["probability"]["Critical"]
         fa = hm["forecast_assisted"]
         log(f"  Critical caught: {pc['recall_expected_rule']:.0%} by expected cases -> {pc['recall']:.0%} by probability "
             f"(AUC {pc['auc']:.3f}) · with rain forecast MAE {fa['mae_without_forecast']:.2f} -> "
-            f"{fa['mae_realistic_forecast']:.2f} (perfect {fa['mae_perfect_forecast']:.2f})")
+            f"{fa['mae_realistic_forecast']:.2f} (perfect {fa['mae_perfect_forecast']:.2f}) · "
+            f"monotone simulation model MAE {hm['simulation_model']['mae']:.2f}")
         log(f"  MAE {hm['model']['mae']:.2f} · RMSE {hm['model']['rmse']:.2f} · "
             f"tier acc {hm['model']['tier_accuracy']:.1%} · alert recall {hm['model']['alert_recall']:.1%} · "
             f"80% PI coverage {hm['interval_coverage_80']:.1%} · "

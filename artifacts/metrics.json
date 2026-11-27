@@ -117,6 +117,10 @@
         "mae_perfect_forecast": 1.0084420938592635,
         "mae_seasonal_average": 1.243265306122449,
         "n_test": 6300
+      },
+      "simulation_model": {
+        "mae": 0.9980555765605436,
+        "mae_main_model": 1.007394012926417
       }
     },
     "3": {
@@ -236,6 +240,10 @@
         "mae_perfect_forecast": 1.018565629187055,
         "mae_seasonal_average": 1.243265306122449,
         "n_test": 6300
+      },
+      "simulation_model": {
+        "mae": 1.0577587758244613,
+        "mae_main_model": 1.0343821428009758
       }
     },
     "4": {
@@ -355,6 +363,10 @@
         "mae_perfect_forecast": 1.0718810871572764,
         "mae_seasonal_average": 1.243265306122449,
         "n_test": 6300
+      },
+      "simulation_model": {
+        "mae": 1.2268559778871837,
+        "mae_main_model": 1.1904407865974664
       }
     }
   },
@@ -365,11 +377,11 @@
       "train_end": "2022-12-31",
       "valid_end": "2023-12-31"
     },
-    "data_fingerprint": "9220f5ae7ed0",
+    "data_fingerprint": "5a2913950e4c",
     "data_rows": 31320,
     "wards": 60,
     "lightgbm_version": "4.7.0",
-    "trained_at": "2026-11-22T01:53:18",
+    "trained_at": "2026-11-27T09:40:53",
     "feature_count": 33
   },
   "tier_thresholds": [
@@ -565,5 +577,5 @@
     "week_sin": "Time of year (sin)",
     "week_cos": "Time of year (cos)"
   },
-  "train_seconds": 130.4
+  "train_seconds": 192.2
 }
