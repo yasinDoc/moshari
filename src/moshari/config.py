@@ -14,6 +14,9 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 DATA_DIR = PROJECT_ROOT / "data"
 RAW_DATA_PATH = DATA_DIR / "raw" / "dengue.csv"
+# Phase 2 onsite file: the same rows plus observed supply demand per ward-week.
+ONSITE_DATA_PATH = DATA_DIR / "raw" / "dengue_onsite.csv"
+SUPPLY_COLS = ["saline_bags_needed", "diagnostic_kits_needed", "hospital_beds_required"]
 MODELS_DIR = PROJECT_ROOT / "models"
 MODEL_PATH = MODELS_DIR / "moshari_lgbm.joblib"
 ARTIFACTS_DIR = PROJECT_ROOT / "artifacts"
