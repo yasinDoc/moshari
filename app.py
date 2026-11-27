@@ -31,9 +31,11 @@ st.set_page_config(
     initial_sidebar_state="auto",
 )
 
-from ui import state, theme  # noqa: E402
+from ui import i18n, state, theme  # noqa: E402
 
-theme.inject_css()
+state.apply_lang_param()
+theme.inject_css(i18n.lang())
+T = i18n.t
 
 PAGES = [
     # operations workflow: see risk -> allocate supplies -> place patients -> deploy crews -> notify
@@ -54,6 +56,7 @@ nav = st.navigation(PAGES, position="hidden")
 
 logo_b64 = base64.b64encode(LOGO.read_bytes()).decode()
 with st.sidebar:
+    state.language_switch()
     st.html(
         f"""<div class="m-brand">
               <div class="mark"><img src="data:image/svg+xml;base64,{logo_b64}" alt=""></div>
@@ -63,22 +66,22 @@ with st.sidebar:
     for page in PAGES:
         key = "nav-current" if page.title == nav.title else f"nav-{page.url_path or 'home'}"
         with st.container(key=key):
-            st.page_link(page, label=page.title, icon=page.icon)
+            st.page_link(page, label=T(page.title), icon=page.icon)
 
-    st.html('<div class="m-side-label">Forecast settings</div>')
+    st.html(f'<div class="m-side-label">{T("Forecast settings")}</div>')
     st.session_state["_controls"] = state.settings()
 
     svc = state.service()
     meta = svc.bundle.metadata
     st.html(
         f"""<div class="m-status">
-              <div class="r"><span class="live"></span>Model ready{" (offline)" if state.is_offline() else ""}</div>
+              <div class="r"><span class="live"></span>{T("Model ready (offline)" if state.is_offline() else "Model ready")}</div>
               <dl>
-                <dt>Trained through</dt><dd>{meta.get('trained_through', 'unknown')}</dd>
-                <dt>Data to</dt><dd>{state.fmt_week(svc.raw['date'].max())}</dd>
-                <dt>Wards</dt><dd>{len(svc.wards)}</dd>
-                <dt>Mode</dt><dd>{"Offline" if state.is_offline() else "Online"}</dd>
-                <dt>Needs internet</dt><dd>No</dd>
+                <dt>{T("Trained through")}</dt><dd>{i18n.tr(meta.get('trained_through', 'unknown'))}</dd>
+                <dt>{T("Data to")}</dt><dd>{i18n.week(svc.raw['date'].max())}</dd>
+                <dt>{T("Wards")}</dt><dd>{i18n.num(len(svc.wards))}</dd>
+                <dt>{T("Mode")}</dt><dd>{T("Offline" if state.is_offline() else "Online")}</dd>
+                <dt>{T("Needs internet")}</dt><dd>{T("No")}</dd>
               </dl>
             </div>"""
     )

@@ -332,12 +332,20 @@ button[data-variant="segmented_control"][aria-checked="true"], [data-testid="stB
 """)
 
 
-def inject_css() -> None:
+# Bangla mode: Hind Siliguri for every weight used (offline it falls back to Noto Sans Bengali / Vrinda).
+_BN_FONTS = "https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700&display=swap"
+
+
+def inject_css(lang: str = "en") -> None:
+    bangla = lang == "bn"
+    font = f"{FONT_BN}, {FONT}" if bangla else FONT
     css = _CSS.substitute(
         BASE=BASE, BASE_HI=BASE_HI, LIGHT=LIGHT, SHADE=SHADE, INK=INK, INK_2=INK_2, MUTED=MUTED, LINE=LINE,
-        ACCENT=ACCENT, ACCENT_SOFT=ACCENT_SOFT, FONT=FONT, FONT_BN=FONT_BN, ICON_FONT=ICON_FONT,
+        ACCENT=ACCENT, ACCENT_SOFT=ACCENT_SOFT, FONT=font, FONT_BN=FONT_BN, ICON_FONT=ICON_FONT,
         CRIT=TIER_COLORS["Critical"],
     )
+    if bangla:
+        css = f"@import url('{_BN_FONTS}');\n" + css
     st.html(f"<style>{css}</style>")
 
 
@@ -378,9 +386,10 @@ def gap() -> None:
 
 
 def footer(meta: dict) -> None:
-    st.html(f'<div class="m-foot"><span>Moshari 1.0, ward-level dengue early warning</span>'
-            f'<span>Model trained through {meta.get("trained_through", "unknown")}, '
-            f'LightGBM {meta.get("lightgbm_version", "")}</span></div>')
+    from ui.i18n import t, tr
+
+    st.html(f'<div class="m-foot"><span>{t("Moshari 1.0, ward-level dengue early warning")}</span>'
+            f'<span>{t("Model trained through {date}, LightGBM {version}", date=tr(meta.get("trained_through", "unknown")), version=tr(meta.get("lightgbm_version", "")))}</span></div>')
 
 
 # --------------------------------------------------------------------------- plotly
@@ -410,5 +419,8 @@ PLOT_CONFIG = {"displayModeBar": False}
 
 
 def plot(fig: go.Figure, height: int) -> None:
+    from ui.i18n import localize_figure
+
     fig.update_layout(height=height)
+    localize_figure(fig)
     st.plotly_chart(fig, width="stretch", config=PLOT_CONFIG, theme=None)

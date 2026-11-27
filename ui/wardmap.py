@@ -21,6 +21,7 @@ import pandas as pd
 from moshari import config as C
 from moshari.data import ward_label
 from ui import theme
+from ui.i18n import num, t, tr
 
 MAP_PATH = Path(__file__).resolve().parents[1] / "data" / "geo" / "ward_map.json"
 CONTEXT_FILL = "#DED8CC"          # real wards that are not in the dataset
@@ -40,8 +41,8 @@ def load_map(path: Path = MAP_PATH) -> dict:
 
 
 def _title(r) -> str:
-    return (f"{ward_label(r.ward_id)}: {r.tier} risk, {r.expected_cases:.1f} expected cases "
-            f"(80% range {r.lower_80:.1f} to {r.upper_80:.1f})")
+    return t("{ward}: {tier} risk, {cases:.1f} expected cases (80% range {lo:.1f} to {hi:.1f})",
+             ward=tr(ward_label(r.ward_id)), tier=tr(r.tier), cases=r.expected_cases, lo=r.lower_80, hi=r.upper_80)
 
 
 def _wrap(el: str, ward_id: str, link: dict | None, title: str) -> str:
@@ -50,7 +51,7 @@ def _wrap(el: str, ward_id: str, link: dict | None, title: str) -> str:
     # ward first, so the link reads ward_forecast?ward=<id>&<settings>
     href = "ward_forecast?" + urlencode({"ward": ward_id, **{k: v for k, v in link.items() if k != "ward"}})
     return (f'<a href="{html.escape(href)}" target="_self" aria-label="{html.escape(title)}. '
-            f'Open ward forecast.">{el}</a>')
+            f'{t("Open ward forecast.")}">{el}</a>')
 
 
 def _label(x: float, y: float, text: str, color: str) -> str:
@@ -67,7 +68,7 @@ def _panel(p: dict, rows: dict, link: dict | None) -> tuple[str, int, int]:
     labels, high, shown = [], 0, 0
     shapes = [(s["ward_id"], "path", s) for s in p["wards"]] + [(s["ward_id"], "dot", s) for s in p["dots"]]
     for ward_id, kind, s in shapes:
-        num = ward_id.rsplit("_", 1)[-1]
+        num_ = ward_id.rsplit("_", 1)[-1]
         r = rows.get(ward_id)
         if kind == "path":
             x, y = s["label"]
@@ -86,9 +87,10 @@ def _panel(p: dict, rows: dict, link: dict | None) -> tuple[str, int, int]:
         el = (f'<path d="{s["d"]}" {attrs}><title>{html.escape(title)}</title></path>' if kind == "path" else
               f'<circle cx="{x}" cy="{y}" r="{DOT_R}" {attrs}><title>{html.escape(title)}</title></circle>')
         parts.append(_wrap(el, ward_id, link, title))
-        labels.append(_label(x, y, str(int(num)), theme.TIER_TEXT[r.tier]))
-    svg = (f'<svg viewBox="0 0 {p["width"]} {p["height"]}" role="img" aria-label="{html.escape(p["title"])} '
-           f'ward risk map" preserveAspectRatio="xMidYMid meet">{"".join(parts)}{"".join(labels)}</svg>')
+        labels.append(_label(x, y, num(int(num_)), theme.TIER_TEXT[r.tier]))
+    aria = t("{city} ward risk map", city=tr(p["title"]))
+    svg = (f'<svg viewBox="0 0 {p["width"]} {p["height"]}" role="img" aria-label="{html.escape(aria)}" '
+           f'preserveAspectRatio="xMidYMid meet">{"".join(parts)}{"".join(labels)}</svg>')
     return svg, high, shown
 
 
@@ -123,23 +125,29 @@ def ward_map_html(fc: pd.DataFrame, link: dict | None = None, thresholds: list[f
     for p in m["panels"]:
         svg, high, shown = _panel(p, rows, link)
         total = len(p["wards"]) + len(p["dots"])
-        sub = (f"{high} of {shown} wards high or above" if shown else "Not selected in the sidebar")
+        sub = (t("{high} of {shown} wards high or above", high=high, shown=shown) if shown
+               else t("Not selected in the sidebar"))
         ratio = p["width"] / p["height"]                 # equal heights: width follows the shape
         blocks.append(f'<div class="pn{"" if shown else " dim"}" style="flex:{ratio:.3f} 1 0">'
-                      f'<div class="t">{html.escape(p["title"])}</div><div class="s">{sub}'
-                      f'{"" if shown == total or not shown else f" ({total - shown} filtered out)"}</div>{svg}</div>')
+                      f'<div class="t">{html.escape(tr(p["title"]))}</div><div class="s">{sub}'
+                      f'{"" if shown == total or not shown else t(" ({n} filtered out)", n=total - shown)}</div>{svg}</div>')
     if thresholds:
-        t = thresholds
-        bounds = {"Low": f"under {t[0]:g}", "Medium": f"{t[0]:g} to {t[1]:g}", "High": f"{t[1]:g} to {t[2]:g}",
-                  "Critical": f"{t[2]:g}+"}
+        bounds = tier_bounds(thresholds)
     else:
         bounds = {n: "" for n in C.TIER_NAMES}
-    legend = "".join(f'<span><span class="m-dot" style="background:{theme.TIER_COLORS[n]}"></span><b>{n}</b>'
-                     f'{"&nbsp; " + bounds[n] + " cases" if bounds[n] else ""}</span>' for n in C.TIER_NAMES)
-    legend += (f'<span><span class="m-dot" style="background:{CONTEXT_FILL}"></span>Other wards (not in the '
-               f'dataset)</span>')
+    legend = "".join(f'<span><span class="m-dot" style="background:{theme.TIER_COLORS[n]}"></span><b>{tr(n)}</b>'
+                     f'{"&nbsp; " + t("{range} cases", range=bounds[n]) if bounds[n] else ""}</span>'
+                     for n in C.TIER_NAMES)
+    legend += (f'<span><span class="m-dot" style="background:{CONTEXT_FILL}"></span>{t("Other wards (not in the dataset)")}'
+               f'</span>')
     if link is not None:
-        legend += '<span class="hint">Click a ward to open its forecast</span>'
+        legend += f'<span class="hint">{t("Click a ward to open its forecast")}</span>'
     return (f'{CSS}<div class="m-map">{"".join(blocks)}</div>'
             f'<div class="m-legend" style="margin-top:20px">{legend}</div>'
-            f'<div class="m-note" style="margin-top:12px">{html.escape(NOTE)}</div>')
+            f'<div class="m-note" style="margin-top:12px">{html.escape(t(NOTE))}</div>')
+
+
+def tier_bounds(t_: list[float]) -> dict[str, str]:
+    """Case ranges of the four tiers for legends: ``under 2``, ``2 to 5``, ``5 to 9``, ``9+``."""
+    return {"Low": t("under {a:g}", a=t_[0]), "Medium": t("{a:g} to {b:g}", a=t_[0], b=t_[1]),
+            "High": t("{a:g} to {b:g}", a=t_[1], b=t_[2]), "Critical": t("{a:g}+", a=t_[2])}
