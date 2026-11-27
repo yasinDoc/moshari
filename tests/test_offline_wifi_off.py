@@ -85,6 +85,11 @@ def wifi_off(monkeypatch, tmp_path):
     monkeypatch.setattr(socket, "getaddrinfo", getaddrinfo)
     for var in PROXY_VARS:
         monkeypatch.delenv(var, raising=False)
+    import urllib.request
+
+    # urllib builds its opener (with any proxy) once and reuses it; drop it so it re-reads the
+    # now proxy-free environment, as a fresh app start would.
+    monkeypatch.setattr(urllib.request, "_opener", None)
     monkeypatch.delenv("MOSHARI_OFFLINE", raising=False)
     monkeypatch.setattr(live, "CACHE_DIR", tmp_path / "open_meteo")
 
