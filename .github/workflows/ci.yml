@@ -18,6 +18,8 @@ jobs:
           cache: pip
       - run: pip install -r requirements-dev.txt
       - run: pytest
+      - name: Coverage of routing and allocation (fails under 95%)
+        run: pytest -q tests/test_routing.py tests/test_allocation.py tests/test_allocation_engine.py --cov=moshari.routing --cov=moshari.allocation --cov-report=term-missing --cov-fail-under=95
       - name: App boots
         run: |
           timeout 40 streamlit run app.py --server.headless true --server.port 8501 &

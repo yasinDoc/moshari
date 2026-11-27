@@ -131,11 +131,11 @@ File: `src/moshari/routing.py`, plus a new page `ui/views/hospital.py`.
 
 ### S2. Tests (shared quality)
 File: `tests/test_routing.py`, plus tests for Yasin's allocation in `tests/test_allocation.py`.
-- [ ] **Routing:**
+- [x] **Routing:**
   - transfers never cross cities
   - total patients are conserved
   - no ward ends above capacity while its city still has headroom
-- [ ] **Allocation:**
+- [x] **Allocation:**
   - allocated never exceeds stock
   - at 100% stock there are no deficits
   - at 30% stock the highest-priority wards are served first

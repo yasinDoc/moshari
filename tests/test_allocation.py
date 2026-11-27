@@ -188,3 +188,33 @@ def test_rules_hold_on_the_real_forecast(real_service, horizon):
         assert a["crews_assigned"].sum() == min(40, int(a["crews_needed"].sum()))
         if pct == 1.0:
             assert not a["deficit_flag"].any()
+
+
+# --------------------------------------------------------------------------- tie-break (the bug S2 found)
+def _tied_week(order: list[int]) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """Six wards with identical risk, density and cases, plus one clearly higher-risk ward."""
+    ids = [f"DNCC_Ward_{i:02d}" for i in order]
+    fc = pd.DataFrame({
+        C.WARD_COL: ids,
+        C.CITY_COL: "Alpha",
+        "expected_cases": [20.0 if i == 9 else 8.0 for i in order],
+        "upper_80": [30.0 if i == 9 else 12.0 for i in order],
+        "tier_idx": [3 if i == 9 else 2 for i in order],
+        "p_high": [0.9 if i == 9 else 0.5 for i in order],
+    })
+    profiles = pd.DataFrame({"population_density_sqkm": 40_000}, index=ids)
+    return fc, profiles
+
+
+@pytest.mark.parametrize("order", [[1, 2, 3, 4, 5, 6, 9], [6, 5, 4, 3, 2, 1, 9], [9, 4, 1, 6, 3, 5, 2]])
+def test_tied_wards_are_ranked_by_ward_id_whatever_the_row_order(order, ratios):
+    """Equal score and equal cases: ward id decides, so the plan never depends on row order."""
+    fc, wards = _tied_week(order)
+    a = A.allocate(fc, wards, stock_pct=0.5, total_crews=3, ratios=ratios)
+    tied = a[a[C.WARD_COL] != "DNCC_Ward_09"]
+    assert a[C.WARD_COL].iloc[0] == "DNCC_Ward_09"                      # a real priority still wins
+    assert list(tied[C.WARD_COL]) == sorted(tied[C.WARD_COL])           # ties go by ward id
+    assert list(tied["priority_rank"]) == list(range(2, 8))
+    # Scarce crews go to the top ward, then the lowest ward ids among the tied ones.
+    got = a.loc[a["crews_assigned"] > 0, C.WARD_COL].tolist()
+    assert got == ["DNCC_Ward_09", "DNCC_Ward_01", "DNCC_Ward_02"]

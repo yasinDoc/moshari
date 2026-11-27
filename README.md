@@ -88,7 +88,7 @@ Optional:
 
 ```bash
 python scripts/train.py            # retrain and re-evaluate (about 2 minutes on a laptop CPU)
-pip install -r requirements-dev.txt && pytest   # 33 tests
+pip install -r requirements-dev.txt && pytest   # 976 tests
 docker build -t moshari . && docker run -p 8501:8501 moshari
 ```
 
