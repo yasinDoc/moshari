@@ -181,7 +181,9 @@ def what_if() -> None:
             w1, w2, w3 = st.columns(3)
             rain = w1.slider(T("Rainfall"), 0.0, 3.0, 1.0, 0.1, format="×%.1f", key="wi_rain")
             temp = w2.slider(T("Temperature"), -4.0, 4.0, 0.0, 0.5, format="%+.1f °C", key="wi_temp")
-            hum = w3.slider(T("Humidity"), -20.0, 20.0, 0.0, 1.0, format=T("%+.0f pts"), key="wi_hum")
+            # The slider draws its value itself, so in Bangla the unit moves into the label.
+            hum = w3.slider(T("Humidity (points)") if BN else "Humidity", -20.0, 20.0, 0.0, 1.0,
+                            format="%+.0f" if BN else "%+.0f pts", key="wi_hum")
         scenario = Scenario(rain, temp, hum)
         if scenario.is_baseline:
             st.html('<p class="m-note">' + T("Move a slider to compare a scenario with the forecast above.") + '</p>')

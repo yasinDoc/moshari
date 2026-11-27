@@ -125,6 +125,8 @@ The sidebar follows an officer's working order: see the risk, allocate supplies,
 | **Model accuracy** | Hold-out results for 2024–25 against three simple baselines, a replay of both seasons, alert sensitivity, Critical weeks caught by probability, the gain from a rain forecast, and the evidence for the 3-week breeding lag. |
 | **Data** | Upload a newer weekly CSV. It is validated, then every page forecasts from it. |
 
+**English or বাংলা.** The **ভাষা / Language** switch at the top of the sidebar turns every page into Bangla: headings, tables, charts, hover labels and tips, with Bangla digits and month names (২৩ জুন ২০২৫) and ward names such as "DNCC ওয়ার্ড ১২". English is the default and reads exactly as before. The choice stays while you move between pages, and a link with `?lang=bn` opens the dashboard in Bangla. The Dispatch notices start in the same language (you can still pick the other one there). Codes (DNCC, W12), product names and CSV/ZIP downloads stay as they are. The texts live in one file, `src/moshari/locales/bn.json`, so a Bangla reader can correct a wording without touching code. A few things Streamlit draws itself (the file uploader's own text, the table toolbar, the digits on sliders and number boxes) stay in English, and the Weekly briefing PDF is still English for now.
+
 ![Ward forecast: outlook, rain-to-cases chart and drivers](docs/img/ward-forecast.png)
 
 ![Live outlook: real Open-Meteo weather for five cities, run through the model](docs/img/live.png)
@@ -228,6 +230,7 @@ moshari/
 │   ├── simulation.py       # vector-control crew simulator
 │   ├── dispatch.py         # SMS, WhatsApp and commissioner brief templates
 │   ├── dispatch_bn.py      # the same notices in Bangla (Unicode SMS, at most 2 parts)
+│   ├── i18n.py, locales/   # English / Bangla text for the dashboard (bn.json catalog)
 │   ├── dispatch_pdf.py     # the brief as a PDF (reportlab)
 │   └── api.py              # FastAPI REST layer
 ├── scripts/                # train.py, fetch_data.py, export_dispatch.py, offline_check.py

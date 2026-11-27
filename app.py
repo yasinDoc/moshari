@@ -31,8 +31,9 @@ st.set_page_config(
     initial_sidebar_state="auto",
 )
 
-from ui import i18n, state, theme  # noqa: E402
+from ui import state, theme  # noqa: E402
 
+i18n = state.i18n          # the session language (ui/i18n.py), already imported by state
 state.apply_lang_param()
 theme.inject_css(i18n.lang())
 T = i18n.t
