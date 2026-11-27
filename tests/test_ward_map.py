@@ -11,16 +11,20 @@ from __future__ import annotations
 import html
 import importlib.util
 import re
+import sys
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
 import pandas as pd
 import pytest
 
-from moshari import config as C
-from ui import theme, wardmap
-
 ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:          # `pytest` (unlike `python -m pytest`) does not put the repo root on the path
+    sys.path.insert(0, str(ROOT))
+
+from moshari import config as C  # noqa: E402
+from ui import theme, wardmap  # noqa: E402
+
 APP = str(ROOT / "app.py")
 LINK = {"issue": "2024-07-01", "h": "4"}
 ELEMENT = re.compile(r'<(path|circle)\b([^>]*)\bdata-ward="([^"]+)"([^>]*)>(?:<title>(.*?)</title>)?', re.S)
