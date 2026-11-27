@@ -337,6 +337,19 @@ def mode_page() -> None:
                   f"Weekly briefing {issue}: PDF equals briefing_pdf(build(...)) at 70%/40/+0")
             name = getattr(f, "filename", None) if f is not None else None
             check(name == f"moshari_briefing_{exp['target_week']:%Y-%m-%d}.pdf", f"Weekly briefing {issue}: file name ({name})")
+        if issue == "2025-06-02":  # the controls must drive the PDF, not just the defaults
+            try:
+                at.slider(key="brief_stock").set_value(30)
+                at.number_input(key="brief_crews").set_value(10)
+                at.slider(key="brief_surge").set_value(20)
+                at.run()
+                btn = [b for b in at.get("download_button") if "PDF" in b.proto.label]
+                f2 = _media(btn[0].proto.url) if btn else None
+                ok = f2 is not None and bytes(f2.content) == briefing_pdf(build(issue, h, (), 0.30, 10, 20))
+            except Exception as e:  # noqa: BLE001
+                print(f"     controls: {e}")
+                ok = False
+            check(ok, "Weekly briefing: brief_stock=30, brief_crews=10, brief_surge=20 give the PDF of that scenario")
     finish("page")
 
 
@@ -350,9 +363,13 @@ def mode_tests() -> None:
         check("verify" not in src and ".claude" not in src, f"{rel}: does not use the goal verifier")
         tree = ast.parse(src)
         fns = [n for n in ast.walk(tree) if isinstance(n, ast.FunctionDef) and n.name.startswith("test_")]
-        hollow = [f.name for f in fns if not any(isinstance(x, ast.Assert) for x in ast.walk(f))
-                  and "raises" not in ast.unparse(f)]
-        check(not hollow, f"{rel}: every test asserts" + (f"; hollow: {hollow[:4]}" if hollow else ""))
+        def real(f) -> bool:  # calls something and asserts on a non-constant, or uses pytest.raises
+            calls = any(isinstance(x, ast.Call) for x in ast.walk(f))
+            asserts = [x for x in ast.walk(f) if isinstance(x, ast.Assert) and not isinstance(x.test, ast.Constant)]
+            return calls and (bool(asserts) or "raises" in ast.unparse(f))
+        hollow = [f.name for f in fns if not real(f)]
+        check(not hollow, f"{rel}: every test calls code and asserts" + (f"; hollow: {hollow[:4]}" if hollow else ""))
+        src = ast.unparse(tree)  # token checks below ignore comments
         if rel.endswith("test_briefing.py"):
             check(len(fns) >= 10, f"{rel}: >= 10 test functions ({len(fns)})")
             for tok in ("briefing_pdf", "alert_text", "build(", "2024-07-01", "2016-02-29"):

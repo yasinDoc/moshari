@@ -35,8 +35,9 @@ Overview strip and briefing would duplicate logic.
     crews=40, surge_pct=0) -> dict` (keys and values in Data flow).
 - NEW `src/moshari/briefing_pdf.py`: `briefing_pdf(brief: dict) -> bytes`. reportlab imported
   inside the function. One A4 page always (shrink, never a second page); deterministic bytes.
-- NEW `ui/views/briefing.py`: page "Weekly briefing". Controls `brief_stock` (30-100 %, default
-  70), `brief_crews` (0-300, default 40), `brief_surge` (0-100 %, default 0). Shows the decision
+- NEW `ui/views/briefing.py`: page "Weekly briefing". Controls (keys fixed, the verifier sets them): `st.slider` `brief_stock` (30-100,
+  step 5, default 70, percent), `st.number_input` `brief_crews` (0-300, step 5, default 40),
+  `st.slider` `brief_surge` (0-100, step 10, default 0, percent). The PDF follows the controls. Shows the decision
   sentences at the top, then Risk, Supplies, Patient transfers, Crew plan, Notices sections, and
   `st.download_button("Download briefing (PDF)", data=<bytes>, file_name=
   f"moshari_briefing_{target:%Y-%m-%d}.pdf", mime="application/pdf")` with the bytes passed

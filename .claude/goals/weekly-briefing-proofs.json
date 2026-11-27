@@ -23,7 +23,7 @@
       "command": "{python} .claude/goals/weekly-briefing-verify.py page",
       "expect_regex": "(?m)^PASS page",
       "timeout": 900,
-      "catches": "Overview strip missing, stale or at other settings; Overview cards removed; page not in app.py; page crashing on an empty week; button serving HTML, a deferred callable or a different scenario; wrong file name"
+      "catches": "Overview strip missing, stale or at other settings; Overview cards removed; page not in app.py; page crashing on an empty week; button serving HTML, a deferred callable or a different scenario; wrong file name; sliders not driving the PDF"
     },
     {
       "criterion": "4",
@@ -31,7 +31,7 @@
       "command": "{python} .claude/goals/weekly-briefing-verify.py tests && {python} -m pytest tests/test_briefing.py tests/test_briefing_page.py -o addopts=\"\" -q -rs",
       "expect_regex": "(?m)^(?:1[3-9]|[2-9]\\d|\\d{3,}) passed in ",
       "timeout": 900,
-      "catches": "missing, too few, hollow (no assert) or skipped tests; tests not touching the PDF, alert_text, build, the transfer week or the empty week; page tests without AppTest"
+      "catches": "missing, too few, hollow (no assert) or skipped tests; tests not touching the PDF, alert_text, build, the transfer week or the empty week; page tests without AppTest; assert True or constant asserts; required words only in comments"
     },
     {
       "criterion": "5",
@@ -58,11 +58,11 @@
   "pinned": [
     {
       "path": ".claude/goals/weekly-briefing-design.md",
-      "sha256": "091761fbfaecec4914c759579f9129c96ac1dc252a783d745419384121b59518"
+      "sha256": "b5c862cfbc1315d22d886b30575a8fc36720bd91cff76349f21955ca777ca3c8"
     },
     {
       "path": ".claude/goals/weekly-briefing-verify.py",
-      "sha256": "6a4428b31fa36187d3fb34caa4ca63bb47b2b0e8f70d439b689c05137599d873"
+      "sha256": "ad9d02ecc0adb99a2f26e97be56131e441d6f609d802f963aa353d12266c2920"
     },
     {
       "path": "src/moshari/allocation.py",
