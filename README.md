@@ -269,7 +269,7 @@ Both were used only while building. Nothing in the app calls an AI model: the di
 
 All forecasting, allocation, routing, simulation and dispatch runs locally, and no LLM is used. The only runtime API is Open-Meteo on the Live outlook page: at most one request every 6 hours.
 
-## Roadmap for the final round
+## Limitations and next steps
 
 - Connect live dengue case reports, so the Live outlook uses reported cases instead of a weather-driven nowcast.
 - Send the dispatch notices through an SMS and WhatsApp gateway. Today they are generated and downloaded, not sent.
