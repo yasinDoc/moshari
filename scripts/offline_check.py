@@ -6,15 +6,15 @@
 What it does, in about 30 seconds, without touching your files:
 1. Starts the real app (`streamlit run app.py`) on a free local port with the internet cut off
    for that process, and waits for it to answer its health check.
-2. Opens each of the 10 pages (Streamlit's built-in test runner, no browser needed), still with
+2. Opens each of the 11 pages (Streamlit's built-in test runner, no browser needed), still with
    the internet cut off, and records any page that crashes or tries to go online.
 
 "Internet cut off" means every connection or DNS lookup to anything but this computer is refused,
 exactly what happens with Wi-Fi off, and proxy settings are ignored. Only Live outlook is allowed
 to try (it asks Open-Meteo once, then falls back to saved weather or a friendly message).
 
-Prints one line per page and "OFFLINE CHECK: <ok>/10 pages OK". Exits 0 only when the server
-started and all 10 pages passed.
+Prints one line per page and "OFFLINE CHECK: <ok>/11 pages OK". Exits 0 only when the server
+started and all 11 pages passed.
 """
 from __future__ import annotations
 
@@ -39,6 +39,7 @@ PAGES = [
     ("ui/views/hospital.py", "Hospital beds"),
     ("ui/views/simulator.py", "Simulator"),
     ("ui/views/dispatch.py", "Dispatch"),
+    ("ui/views/briefing.py", "Weekly briefing"),
     ("ui/views/live.py", "Live outlook"),
     ("ui/views/ward_forecast.py", "Ward forecast"),
     ("ui/views/model_check.py", "Model accuracy"),

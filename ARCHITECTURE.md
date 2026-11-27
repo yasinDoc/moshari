@@ -114,7 +114,7 @@ Demand is rounded up, so it is never understated. The ratios are refitted from t
 | Forecasts, allocation, routing, simulation, dispatch | Local model and pandas only; they never use the network |
 | Live outlook | `MOSHARI_OFFLINE=1` or the sidebar **Offline mode** toggle skips Open-Meteo and serves the last cached weather. If nothing is cached, the page shows a clear message |
 | Fonts | Google Fonts fall back to system fonts |
-| Proof | `tests/test_offline.py` blocks sockets with the kill switch on: it renders all 9 pages, runs the core pipeline and checks the weather cache. `tests/test_offline_wifi_off.py` refuses every non-local connection with the switch off, as with Wi-Fi off, and checks that only Live outlook tries the internet. `scripts/offline_check.py` repeats this against the real app server ([docs/offline_check.md](docs/offline_check.md)) |
+| Proof | `tests/test_offline.py` blocks sockets with the kill switch on: it renders all 11 pages, runs the core pipeline and checks the weather cache. `tests/test_offline_wifi_off.py` refuses every non-local connection with the switch off, as with Wi-Fi off, and checks that only Live outlook tries the internet. `scripts/offline_check.py` repeats this against the real app server ([docs/offline_check.md](docs/offline_check.md)) |
 
 ## Compute and API cost controls
 

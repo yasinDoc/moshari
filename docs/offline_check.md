@@ -3,9 +3,9 @@
 Moshari has to work on a laptop with no internet. This page shows how to prove it in front of
 the judges, by hand (Wi-Fi off) and with one command, and records what we found.
 
-**Result of the last run (2026-11-27):** all 10 pages work with Wi-Fi off. Nothing crashed. Only
+**Result of the last run (2026-11-27):** all 11 pages work with Wi-Fi off. Nothing crashed. Only
 Live outlook tries the internet: it asks Open-Meteo once, is refused, and shows a clear message
-(or the last saved weather). The other 9 pages never try to go online.
+(or the last saved weather). The other 10 pages never try to go online.
 
 ## 1. By hand, in front of the judges (about 3 minutes)
 
@@ -69,34 +69,35 @@ other than this computer is refused, exactly as with Wi-Fi off, and proxy settin
 ```
 
 It starts the real app (`streamlit run app.py`) and waits for it to answer. Then it opens each of
-the 10 pages, and fails if a page crashes or if any page other than Live outlook tries the internet.
+the 11 pages, and fails if a page crashes or if any page other than Live outlook tries the internet.
 Output from 2026-11-27:
 
 ```
 Offline rehearsal (Wi-Fi off, offline switch not set)
 
-PASS server booted offline, health ok in 1s
-PASS Overview        OK 1.9s
-PASS Ward map        OK 0.3s
-PASS Resources       OK 0.3s
-PASS Hospital beds   OK 0.4s
-PASS Simulator       OK 0.4s
-PASS Dispatch        OK 0.3s
-PASS Live outlook    OK 0.3s - shows: Couldn't reach Open-Meteo and no cached weather exists yet (...) (asked Open-Meteo once, refused, handled)
-PASS Ward forecast   OK 0.4s
-PASS Model accuracy  OK 0.4s
-PASS Data            OK 0.2s
+PASS server booted offline, health ok in 4s
+PASS Overview         OK 7.7s
+PASS Ward map         OK 1.2s
+PASS Resources        OK 1.2s
+PASS Hospital beds    OK 1.3s
+PASS Simulator        OK 1.6s
+PASS Dispatch         OK 1.5s
+PASS Weekly briefing  OK 2.5s
+PASS Live outlook     OK 3.2s - shows saved weather (asked Open-Meteo once, refused, handled)
+PASS Ward forecast    OK 2.2s
+PASS Model accuracy   OK 2.3s
+PASS Data             OK 1.4s
 
-OFFLINE CHECK: 10/10 pages OK, server booted, 7s
+OFFLINE CHECK: 11/11 pages OK, server booted, 33s
 ```
 
-With `--switch`, the result is also 10/10, and Live outlook makes no network attempt at all.
+With `--switch`, the result is also 11/11, and Live outlook makes no network attempt at all.
 
 ## 3. In the test suite (runs on every push)
 
 `tests/test_offline_wifi_off.py` (14 tests) keeps this true from now on:
 
-- every one of the 10 pages renders with Wi-Fi off, and the 9 pages other than Live outlook make no
+- every one of the 11 pages renders with Wi-Fi off, and the 10 pages other than Live outlook make no
   network attempt;
 - Live outlook with no saved weather shows its message instead of crashing;
 - Live outlook with a 2-day-old saved copy still works and says "Offline copy";
