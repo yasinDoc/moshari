@@ -22,8 +22,9 @@ from moshari.service import ForecastService
 ROOT = Path(__file__).resolve().parents[1]
 pytestmark = pytest.mark.skipif(not C.MODEL_PATH.exists(), reason="model not trained")
 
-PAGES = ["ui/views/ward_net.py", "ui/views/resources.py", "ui/views/simulator.py", "ui/views/live.py",
-         "ui/views/ward_forecast.py", "ui/views/model_check.py", "ui/views/data_source.py"]
+PAGES = ["ui/views/ward_net.py", "ui/views/resources.py", "ui/views/hospital.py", "ui/views/simulator.py",
+         "ui/views/dispatch.py", "ui/views/live.py", "ui/views/ward_forecast.py", "ui/views/model_check.py",
+         "ui/views/data_source.py"]
 
 
 class NetworkBlocked(OSError):
