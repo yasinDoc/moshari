@@ -148,7 +148,8 @@ def test_figures_get_bangla_ticks_and_hover(ui_bn):
 
 # --------------------------------------------------------------------------- the real app
 def _heads(at) -> str:
-    return " ".join(h.value for h in at.main.html)
+    # Older Streamlit test trees have no ``.html`` list, so read the raw element protos.
+    return " ".join(h.proto.body for h in at.main.get("html"))
 
 
 def test_app_switches_to_bangla_and_back():
