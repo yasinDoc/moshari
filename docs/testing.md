@@ -94,3 +94,16 @@ above is what shows the tests would notice that line being wrong.
 `test_routing_60_wards_is_fast` fails if routing the 60 wards takes over 1 second per run. Routing
 takes about 1 ms, so the bound only catches a real blow-up (an accidental O(n^3) loop or a hang),
 never a slow CI machine.
+
+## Offline (S3)
+
+`tests/test_offline_wifi_off.py` runs every page with Wi-Fi off: all internet connections are
+refused and the `MOSHARI_OFFLINE` switch is not set. All 9 pages must render, and only Live outlook
+may try the internet (it falls back to saved weather or a clear message). With the switch on,
+nothing tries the internet at all. To rehearse the same thing with the real app server:
+
+```powershell
+.venv\Scripts\python scripts/offline_check.py   # prints "OFFLINE CHECK: 9/9 pages OK"
+```
+
+The step-by-step check for the judges, with Wi-Fi really off, is in [offline_check.md](offline_check.md).
