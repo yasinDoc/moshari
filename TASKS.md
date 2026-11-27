@@ -152,33 +152,33 @@ File: `tests/test_routing.py`, plus tests for Yasin's allocation in `tests/test_
 
 ### A1. Dispatch notices (module 4)
 File: `src/moshari/dispatch.py`, plus a new page `ui/views/dispatch.py`.
-- [ ] **SMS:** 160 characters or fewer, for example: `MOSHARI DNCC-W12: HIGH risk, ~10 cases wk of 23 Jun. Saline 32/40, kits 9/12, beds 3/3. DEFICIT saline. Crews: 2. -DGHS`
-- [ ] **WhatsApp:** a short message with line breaks, covering predicted cases, allocated against required supplies, deficit alerts, assigned crews and the action to take.
-- [ ] **Commissioner brief (HTML, printable to PDF):**
+- [x] **SMS:** 160 characters or fewer, for example: `MOSHARI DNCC-W12: HIGH risk, ~10 cases wk of 23 Jun. Saline 32/40, kits 9/12, beds 3/3. DEFICIT saline. Crews: 2. -DGHS`
+- [x] **WhatsApp:** a short message with line breaks, covering predicted cases, allocated against required supplies, deficit alerts, assigned crews and the action to take.
+- [x] **Commissioner brief (HTML, printable to PDF):**
   - one page per ward: header, risk and cases, a supplies table (required, allocated, gap), deficit warnings, crews, overflow transfers and the actions to take
   - add a "Print / Save as PDF" button
-- [ ] **Templates only.** No LLM or internet, so it works offline.
-- [ ] **Page:** pick a ward or "all High and Critical", preview all three formats, and download them.
+- [x] **Templates only.** No LLM or internet, so it works offline.
+- [x] **Page:** pick a ward or "all High and Critical", preview all three formats, and download them.
 
 ### A2. `/exports` folder (part of 10 pts)
-- [ ] Write `scripts/export_dispatch.py` to generate sample files into `exports/` for the demo week:
+- [x] Write `scripts/export_dispatch.py` to generate sample files into `exports/` for the demo week:
   - `exports/sms/<ward>.txt`
   - `exports/whatsapp/<ward>.txt`
   - `exports/briefs/<ward>.html`
   - and at least one printed `exports/briefs/<ward>.pdf`
-- [ ] Commit the generated samples. The judges check the folder.
+- [x] Commit the generated samples. The judges check the folder.
 
 ### A3. Documentation (part of 10 pts and the Q&A)
-- [ ] **ARCHITECTURE.md:** add Phase 2 to the data flow diagram (allocation, routing, simulation, dispatch), the allocation ratios and priority formula, the routing rules, the simulator's effect size, and the offline design. Keep it short.
-- [ ] **README:**
+- [x] **ARCHITECTURE.md:** add Phase 2 to the data flow diagram (allocation, routing, simulation, dispatch), the allocation ratios and priority formula, the routing rules, the simulator's effect size, and the offline design. Keep it short.
+- [x] **README:**
   - new pages
   - how to run the export script
   - the offline switch
   - the new dataset
   - Phase 2 in "Results at a glance"
-- [ ] **AI disclosure:** list every AI tool used today by all three of us.
-- [ ] **Video script:** write a 7-minute uncut script covering all 5 modules for Yasin, in the style of `docs/demo_script.md`.
-- [ ] **Q&A prep (30 pts):** write `docs/qa_prep.md` with likely judge questions and short answers. For example: why these supply ratios, how routing stays within a city, how the simulator is model-driven, what happens offline, model accuracy and validation.
+- [x] **AI disclosure:** list every AI tool used today by all three of us.
+- [x] **Video script:** write a 7-minute uncut script covering all 5 modules for Yasin, in the style of `docs/demo_script.md`.
+- [x] **Q&A prep (30 pts):** write `docs/qa_prep.md` with likely judge questions and short answers. For example: why these supply ratios, how routing stays within a city, how the simulator is model-driven, what happens offline, model accuracy and validation.
 
 ---
 
