@@ -126,7 +126,7 @@ if not rows:
     st.stop()
 
 # ----------------------------------------------------------------------------- preview
-left, right = st.columns([5, 7])
+left, right = st.columns([11, 13])
 with left:
     with st.container(key="card-dispatch-list"):
         theme.card_title("Wards", "Highest priority first. Pick one to preview.", f"{len(rows)}")
@@ -139,10 +139,10 @@ with left:
         ev = st.dataframe(
             overview, hide_index=True, width="stretch", height=min(38 + 35 * len(rows), 460),
             on_select="rerun", selection_mode="single-row", key="disp_table",
-            column_config={"Ward": st.column_config.TextColumn(width="small"),
-                           "Cases": st.column_config.NumberColumn(format="%.1f", width="small"),
-                           "Risk": st.column_config.TextColumn(width="small"),
-                           "Status": st.column_config.TextColumn(width="large")},
+            column_config={"Ward": st.column_config.TextColumn(width=118, pinned=True),
+                           "Cases": st.column_config.NumberColumn(format="%.1f", width=58),
+                           "Risk": st.column_config.TextColumn(width=64),
+                           "Status": st.column_config.TextColumn(width=150)},
         )
         sel = ev.selection.rows[0] if ev and ev.selection.rows else 0
         sel = min(sel, len(rows) - 1)
